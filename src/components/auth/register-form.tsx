@@ -31,9 +31,17 @@ export function RegisterForm() {
             ? "Emailingizga tasdiqlash havolasi yuborildi."
             : "Ro’yxatdan muvaffaqiyatli o’tdingiz. Endi tizimga kirishingiz mumkin."}
         </p>
-        <Link href="/login" className="mt-4 inline-block font-medium text-primary hover:underline">
-          Kirish sahifasiga o’tish
-        </Link>
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <Link
+            href="/"
+            className="inline-flex h-11 w-full max-w-xs items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Marketplace&rsquo;ga o&rsquo;tish
+          </Link>
+          <Link href="/login" className="font-medium text-primary hover:underline">
+            Kirish sahifasiga o&rsquo;tish
+          </Link>
+        </div>
       </div>
     );
   }
@@ -96,14 +104,16 @@ export function RegisterForm() {
 
         {identifierType === "phone" ? (
           <>
-            <Input
+            <PasswordInput
               name="phone"
-              type="tel"
+              revealedType="tel"
               inputMode="tel"
               placeholder="+998901234567"
               autoComplete="tel"
               className="mt-1.5"
               invalid={!!state.fieldErrors?.phone}
+              hideLabel="Nomerni yashirish"
+              showLabel="Nomerni ko'rsatish"
               required
             />
             <FieldError messages={state.fieldErrors?.phone} />

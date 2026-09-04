@@ -60,7 +60,7 @@ export async function registerAction(
   const { fullName, identifierType, phone, email, password, role } = parsed.data;
   const supabase = await createClient();
 
-  const { error } =
+  const { data, error } =
     identifierType === "phone"
       ? await supabase.auth.signUp({
           phone: phone!,
@@ -78,6 +78,13 @@ export async function registerAction(
 
   if (error) {
     return { error: error.message };
+  }
+
+  // When phone/email confirmation isn't required, Supabase already returns
+  // an active session from signUp() — sign the person straight into the
+  // marketplace instead of making them log in again right after.
+  if (data.session) {
+    redirect("/");
   }
 
   return { success: true };

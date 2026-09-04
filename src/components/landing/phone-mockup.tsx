@@ -33,12 +33,32 @@ const PRODUCTS = [
  * a body + colored screen + notch/home-indicator, so each card reads as "a
  * phone" without reproducing any brand's actual product photography.
  */
-function MiniPhoneIcon({ fillClassName, className }: { fillClassName: string; className?: string }) {
+function MiniPhoneIcon({ fillClassName, className, uid }: { fillClassName: string; className?: string; uid: string }) {
+  const gradId = `phone-sheen-${uid.replace(/[^a-zA-Z0-9-]/g, "")}`;
   return (
     <svg viewBox="0 0 40 64" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="white" stopOpacity="0.35" />
+          <stop offset="35%" stopColor="white" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* body / chassis */}
       <rect x="1" y="1" width="38" height="62" rx="9" className="fill-slate-800" />
+      {/* side buttons */}
+      <rect x="-0.3" y="14" width="1.3" height="5" rx="0.6" className="fill-slate-700" />
+      <rect x="38.9" y="12" width="1.3" height="8" rx="0.6" className="fill-slate-700" />
+      {/* screen */}
       <rect x="3.5" y="5.5" width="33" height="53" rx="5.5" className={fillClassName} />
+      {/* rear camera module (visible through the screen tint as a design accent) */}
+      <rect x="6" y="8" width="9" height="9" rx="3" fill="black" fillOpacity="0.12" />
+      <circle cx="10" cy="12" r="1.6" fill="black" fillOpacity="0.22" />
+      <circle cx="14" cy="16" r="1.2" fill="black" fillOpacity="0.18" />
+      {/* glare */}
+      <rect x="3.5" y="5.5" width="33" height="53" rx="5.5" fill={`url(#${gradId})`} />
+      {/* front camera notch */}
       <circle cx="20" cy="3.2" r="1.1" className="fill-slate-600" />
+      {/* home indicator */}
       <rect x="14.5" y="60" width="11" height="1.6" rx="0.8" className="fill-slate-600" />
     </svg>
   );
@@ -193,7 +213,7 @@ export function PhoneMockup() {
                   {PRODUCTS.map((card) => (
                     <div key={card.name} className="rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-slate-100 sm:rounded-xl sm:p-2">
                       <div className="relative flex h-11 w-full items-center justify-center rounded-md bg-slate-50 sm:h-16 sm:rounded-lg">
-                        <MiniPhoneIcon fillClassName={card.fill} className="h-9 w-auto drop-shadow-sm sm:h-14" />
+                        <MiniPhoneIcon fillClassName={card.fill} uid={card.name} className="h-9 w-auto drop-shadow-sm sm:h-14" />
                         <Heart className="absolute right-1 top-1 h-2.5 w-2.5 text-slate-300 sm:right-1.5 sm:top-1.5 sm:h-3 sm:w-3" />
                         {card.drop && (
                           <span className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded bg-success px-1 py-0.5 text-[6px] font-semibold text-success-foreground sm:bottom-1.5 sm:left-1.5 sm:text-[7px]">

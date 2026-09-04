@@ -78,9 +78,9 @@ const SCREENS = [
     content: (
       <div className="space-y-2">
         {[
-          { s: "Do'kon A", p: "12 400 000", best: true },
-          { s: "Do'kon B", p: "12 950 000", best: false },
-          { s: "Do'kon C", p: "13 100 000", best: false },
+          { s: "MilliyApple", p: "12 400 000", best: true },
+          { s: "iPhone_Gallery", p: "12 950 000", best: false },
+          { s: "SmartTex Malika", p: "13 100 000", best: false },
         ].map((row) => (
           <div
             key={row.s}
@@ -88,8 +88,8 @@ const SCREENS = [
               row.best ? "bg-success/15 text-success" : "bg-white/5 text-white/60"
             }`}
           >
-            <span>{row.s}</span>
-            <span className="font-semibold">{row.p}</span>
+            <span className="truncate pr-2">{row.s}</span>
+            <span className="shrink-0 font-semibold">{row.p}</span>
           </div>
         ))}
       </div>
