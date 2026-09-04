@@ -21,10 +21,10 @@ const PARTICLES = [
 ];
 
 const PRODUCTS = [
-  { name: "iPhone 15 Pro 256GB", fill: "fill-indigo-300", price: "12 400 000", oldPrice: "13 500 000", drop: true },
-  { name: "Samsung Galaxy S24 Ultra", fill: "fill-amber-300", price: "15 800 000", oldPrice: null, drop: false },
+  { name: "iPhone 17 Pro Max", fill: "fill-indigo-300", price: "11 000 000", oldPrice: "11 900 000", drop: true },
+  { name: "Samsung Galaxy S25 Ultra", fill: "fill-amber-300", price: "10 000 000", oldPrice: null, drop: false },
   { name: "Redmi Note 13 Pro", fill: "fill-emerald-300", price: "3 250 000", oldPrice: "3 550 000", drop: true },
-  { name: "iPhone 13 128GB", fill: "fill-rose-300", price: "7 100 000", oldPrice: null, drop: false },
+  { name: "iPhone 15 Plus", fill: "fill-rose-300", price: "9 000 000", oldPrice: null, drop: false },
 ];
 
 /**
