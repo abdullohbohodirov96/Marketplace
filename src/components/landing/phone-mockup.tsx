@@ -21,11 +21,28 @@ const PARTICLES = [
 ];
 
 const PRODUCTS = [
-  { name: "iPhone 15 Pro 256GB", grad: "from-primary-200 to-primary-100", price: "12 400 000", oldPrice: "13 500 000", drop: true },
-  { name: "Samsung Galaxy S24 Ultra", grad: "from-amber-100 to-orange-100", price: "15 800 000", oldPrice: null, drop: false },
-  { name: "Redmi Note 13 Pro", grad: "from-emerald-100 to-teal-100", price: "3 250 000", oldPrice: "3 550 000", drop: true },
-  { name: "iPhone 13 128GB", grad: "from-rose-100 to-pink-100", price: "7 100 000", oldPrice: null, drop: false },
+  { name: "iPhone 15 Pro 256GB", fill: "fill-indigo-300", price: "12 400 000", oldPrice: "13 500 000", drop: true },
+  { name: "Samsung Galaxy S24 Ultra", fill: "fill-amber-300", price: "15 800 000", oldPrice: null, drop: false },
+  { name: "Redmi Note 13 Pro", fill: "fill-emerald-300", price: "3 250 000", oldPrice: "3 550 000", drop: true },
+  { name: "iPhone 13 128GB", fill: "fill-rose-300", price: "7 100 000", oldPrice: null, drop: false },
 ];
+
+/**
+ * A small, original vector phone silhouette used as the product thumbnail
+ * inside the hero mockup's mini feed — not a photo of any real device, just
+ * a body + colored screen + notch/home-indicator, so each card reads as "a
+ * phone" without reproducing any brand's actual product photography.
+ */
+function MiniPhoneIcon({ fillClassName, className }: { fillClassName: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 40 64" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="38" height="62" rx="9" className="fill-slate-800" />
+      <rect x="3.5" y="5.5" width="33" height="53" rx="5.5" className={fillClassName} />
+      <circle cx="20" cy="3.2" r="1.1" className="fill-slate-600" />
+      <rect x="14.5" y="60" width="11" height="1.6" rx="0.8" className="fill-slate-600" />
+    </svg>
+  );
+}
 
 /**
  * The hero "wow" element: a floating phone frame showing a stylized preview
@@ -168,8 +185,9 @@ export function PhoneMockup() {
                 <div className="grid grid-cols-2 gap-1.5 px-3 sm:gap-2 sm:px-4">
                   {PRODUCTS.map((card) => (
                     <div key={card.name} className="rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-slate-100 sm:rounded-xl sm:p-2">
-                      <div className={`relative h-11 w-full rounded-md bg-gradient-to-br sm:h-16 sm:rounded-lg ${card.grad}`}>
-                        <Heart className="absolute right-1 top-1 h-2.5 w-2.5 text-white drop-shadow sm:right-1.5 sm:top-1.5 sm:h-3 sm:w-3" />
+                      <div className="relative flex h-11 w-full items-center justify-center rounded-md bg-slate-50 sm:h-16 sm:rounded-lg">
+                        <MiniPhoneIcon fillClassName={card.fill} className="h-9 w-auto drop-shadow-sm sm:h-14" />
+                        <Heart className="absolute right-1 top-1 h-2.5 w-2.5 text-slate-300 sm:right-1.5 sm:top-1.5 sm:h-3 sm:w-3" />
                         {card.drop && (
                           <span className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded bg-success px-1 py-0.5 text-[6px] font-semibold text-success-foreground sm:bottom-1.5 sm:left-1.5 sm:text-[7px]">
                             <TrendingDown className="h-1.5 w-1.5 sm:h-2 sm:w-2" />
