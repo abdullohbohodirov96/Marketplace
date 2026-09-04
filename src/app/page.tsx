@@ -20,7 +20,7 @@ export default async function HomePage() {
     .limit(6);
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col bg-[#0a0b18]">
       <LandingHeader />
 
       <main className="flex-1 pb-16 lg:pb-0">

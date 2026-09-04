@@ -20,8 +20,8 @@ export function LandingHeader() {
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
-      className={`sticky top-0 z-40 transition-colors duration-300 ${
-        scrolled ? "border-b border-white/10 bg-[#0a0b18]/80 backdrop-blur-lg" : "bg-transparent"
+      className={`sticky top-0 z-40 bg-[#0a0b18] transition-colors duration-300 ${
+        scrolled ? "border-b border-white/10 bg-[#0a0b18]/80 backdrop-blur-lg" : ""
       }`}
     >
       <div className="container flex h-16 items-center gap-4 sm:h-20">
