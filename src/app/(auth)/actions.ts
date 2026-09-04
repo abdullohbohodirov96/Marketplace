@@ -121,7 +121,10 @@ export async function loginAction(
     return { error: "Login yoki parol noto'g'ri" };
   }
 
-  redirect("/");
+  const next = String(formData.get("next") ?? "");
+  // Only ever redirect back to a same-origin relative path — never follow an
+  // absolute/external URL from user input (open-redirect protection).
+  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
 }
 
 export async function logoutAction() {

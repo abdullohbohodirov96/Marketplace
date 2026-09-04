@@ -12,11 +12,12 @@ import { FieldError } from "@/components/auth/field-error";
 
 const initialState: ActionState = {};
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string } = {}) {
   const [state, formAction] = useActionState(loginAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-5" noValidate>
+      {next && <input type="hidden" name="next" value={next} />}
       <div>
         <Label htmlFor="identifier">Telefon yoki email</Label>
         <Input
