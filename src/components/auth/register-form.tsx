@@ -16,6 +16,10 @@ export function RegisterForm() {
   const [state, formAction] = useActionState(registerAction, initialState);
   const [identifierType, setIdentifierType] = useState<"phone" | "email">("phone");
   const [role, setRole] = useState<"customer" | "seller">("customer");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
   if (state.success) {
     return (
@@ -128,6 +132,7 @@ export function RegisterForm() {
           autoComplete="new-password"
           className="mt-1.5"
           invalid={!!state.fieldErrors?.password}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
         <FieldError messages={state.fieldErrors?.password} />
@@ -141,10 +146,17 @@ export function RegisterForm() {
           type="password"
           autoComplete="new-password"
           className="mt-1.5"
-          invalid={!!state.fieldErrors?.confirmPassword}
+          invalid={!!state.fieldErrors?.confirmPassword || passwordsMismatch}
+          onChange={(e) => setConfirmPassword(e.target.value)}
           required
         />
-        <FieldError messages={state.fieldErrors?.confirmPassword} />
+        {passwordsMismatch ? (
+          <p className="mt-1.5 text-sm text-destructive">Parollar mos kelmadi</p>
+        ) : passwordsMatch ? (
+          <p className="mt-1.5 text-sm text-success">Parollar mos keldi</p>
+        ) : (
+          <FieldError messages={state.fieldErrors?.confirmPassword} />
+        )}
       </div>
 
       <div>
@@ -161,7 +173,9 @@ export function RegisterForm() {
         </p>
       )}
 
-      <SubmitButton size="lg">Ro’yxatdan o’tish</SubmitButton>
+      <SubmitButton size="lg" disabled={passwordsMismatch}>
+        Ro’yxatdan o’tish
+      </SubmitButton>
 
       <p className="text-center text-sm text-muted-foreground">
         Akkountingiz bormi?{" "}
