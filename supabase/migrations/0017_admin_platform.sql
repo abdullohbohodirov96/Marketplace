@@ -81,7 +81,7 @@ create table public.platform_settings (
 );
 
 insert into public.platform_settings (key, value, description) values
-  ('platform_name', '"Malika Market"', 'Platforma nomi'),
+  ('platform_name', '"Telefy"', 'Platforma nomi'),
   ('product_moderation_review_days', '3', 'Yangi mahsulotni moderator ko''rib chiqishi kutilayotgan kun'),
   ('offer_stale_after_days', '3', 'Nechi kundan keyin taklif "eskirgan" deb belgilanadi'),
   ('offer_auto_inactive_after_days', '14', 'Nechi kundan keyin tasdiqlanmagan taklif avtomatik inactive bo''ladi'),
@@ -91,7 +91,7 @@ insert into public.platform_settings (key, value, description) values
   ('max_file_size_mb', '10', 'Yuklanadigan fayl uchun maksimal hajm (MB)'),
   ('review_requires_moderation', 'true', 'Izohlar chop etilishidan oldin moderatsiyadan o''tishi kerakmi'),
   ('maintenance_mode', 'false', 'Platformani texnik xizmat rejimiga o''tkazish'),
-  ('seo_default_title', '"Malika Market — Malika bozori onlayn"', 'Standart meta title'),
+  ('seo_default_title', '"Telefy — Malika bozori onlayn"', 'Standart meta title'),
   ('seo_default_description', '"Malika elektronika bozoridagi eng yaxshi takliflarni toping va solishtiring."', 'Standart meta description');
 
 create trigger feature_flags_set_updated_at

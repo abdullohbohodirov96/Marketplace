@@ -36,7 +36,7 @@ const FEATURES = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="relative bg-[#0a0b18] py-16 sm:py-24">
+    <section id="features" className="relative bg-[#0a0b18] py-12 sm:py-24">
       <div className="container">
         <ScrollReveal className="mx-auto max-w-xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-primary-400">
@@ -46,14 +46,14 @@ export function FeaturesSection() {
             Xarid qilishning yangi tajribasi
           </h2>
           <p className="mt-3 text-white/50">
-            Malika Market — faqat e&rsquo;lonlar taxtasi emas, xarid qilishni osonlashtiruvchi to&rsquo;liq vosita.
+            Telefy — faqat e&rsquo;lonlar taxtasi emas, xarid qilishni osonlashtiruvchi to&rsquo;liq vosita.
           </p>
         </ScrollReveal>
 
         <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f, i) => (
             <ScrollReveal key={f.title} delay={0.05 * (i % 3)}>
-              <div className="group h-full rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur transition-colors hover:border-primary-400/30 hover:bg-white/[0.06]">
+              <div className="group h-full rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur transition-colors hover:border-primary-400/30 hover:bg-white/[0.06] sm:p-6">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500/20 to-accent/10 text-primary-300 ring-1 ring-white/10 transition-transform group-hover:scale-110">
                   <f.icon className="h-5 w-5" />
                 </span>

@@ -1,7 +1,15 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { MessageCircle, Store, TrendingUp, CheckCircle2 } from "lucide-react";
+import {
+  MessageCircle,
+  Store,
+  TrendingUp,
+  CheckCircle2,
+  Smartphone,
+  Laptop,
+  Headphones,
+} from "lucide-react";
 import { ScrollReveal } from "@/components/landing/scroll-reveal";
 
 const SCREENS = [
@@ -13,14 +21,20 @@ const SCREENS = [
     x: -40,
     content: (
       <div className="space-y-2">
-        <div className="h-16 rounded-lg bg-gradient-to-br from-primary-300/40 to-primary-200/20" />
+        <div className="relative flex h-16 flex-col justify-end overflow-hidden rounded-lg bg-gradient-to-br from-primary-400/60 to-primary-700/40 p-2">
+          <div className="absolute -right-3 -top-3 h-12 w-12 rounded-full bg-white/10" />
+          <span className="text-[10px] font-semibold text-white">TechnoMall Malika</span>
+          <span className="text-[8px] text-white/70">240+ mahsulot &middot; 4.8 &#9733;</span>
+        </div>
         <div className="flex items-center gap-1.5 text-white/70">
           <CheckCircle2 className="h-3.5 w-3.5 text-success" />
           <span className="text-[10px] font-medium">Tasdiqlangan do&rsquo;kon</span>
         </div>
         <div className="grid grid-cols-3 gap-1.5">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-10 rounded bg-white/10" />
+          {[Smartphone, Laptop, Headphones].map((Icon, i) => (
+            <div key={i} className="flex h-10 items-center justify-center rounded bg-white/10 text-white/50">
+              <Icon className="h-4 w-4" />
+            </div>
           ))}
         </div>
       </div>
@@ -91,7 +105,7 @@ export function ShowcaseSection() {
           </p>
         </ScrollReveal>
 
-        <div className="mt-16 flex flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-center sm:gap-4">
+        <div className="mt-16 flex flex-col items-center gap-5 sm:flex-row sm:items-end sm:justify-center sm:gap-4">
           {SCREENS.map((screen, i) => (
             <motion.div
               key={screen.label}
@@ -103,17 +117,21 @@ export function ShowcaseSection() {
               }
               viewport={{ once: true, amount: 0.4 }}
               transition={{ duration: 0.7, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] }}
-              whileHover={reduceMotion ? undefined : { rotate: 0, y: -8, scale: 1.03 }}
               style={{ zIndex: i === 1 ? 10 : 5 }}
-              className={`w-[220px] shrink-0 rounded-2xl border border-white/10 bg-gradient-to-b p-4 shadow-2xl backdrop-blur ${screen.accent} ${
-                i === 1 ? "sm:w-[240px]" : "sm:mb-6"
-              }`}
+              className={`w-[190px] shrink-0 sm:w-[220px] ${i === 1 ? "sm:w-[240px]" : "sm:mb-6"}`}
             >
-              <div className="mb-3 flex items-center gap-1.5 text-white/60">
-                <screen.icon className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-medium uppercase tracking-wide">{screen.label}</span>
-              </div>
-              {screen.content}
+              <motion.div
+                animate={reduceMotion ? undefined : { y: [0, -8, 0] }}
+                transition={{ duration: 4.5 + i * 0.6, delay: i * 0.3, repeat: Infinity, ease: "easeInOut" }}
+                whileHover={reduceMotion ? undefined : { rotate: 0, y: -10, scale: 1.03 }}
+                className={`rounded-2xl border border-white/10 bg-gradient-to-b p-3.5 shadow-2xl backdrop-blur sm:p-4 ${screen.accent}`}
+              >
+                <div className="mb-2.5 flex items-center gap-1.5 text-white/60 sm:mb-3">
+                  <screen.icon className="h-3.5 w-3.5" />
+                  <span className="text-[9px] font-medium uppercase tracking-wide sm:text-[10px]">{screen.label}</span>
+                </div>
+                {screen.content}
+              </motion.div>
             </motion.div>
           ))}
         </div>

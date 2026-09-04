@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Heart, Bell, MapPin, Store, Search, User, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 
 const NAV_ITEMS = [
   { href: "/categories", label: "Kategoriyalar" },
@@ -12,9 +13,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center gap-4">
-        <Link href="/" className="shrink-0 text-lg font-bold tracking-tight text-primary">
-          Malika Market
-        </Link>
+        <Logo />
 
         <nav className="hidden items-center gap-1 lg:flex">
           {NAV_ITEMS.map((item) => (

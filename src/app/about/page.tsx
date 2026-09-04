@@ -6,7 +6,7 @@ export default function AboutPage() {
     <ComingSoonPage
       icon={Info}
       title="Biz haqimizda"
-      description="Malika Market — Malika elektronika bozori sotuvchilari uchun yaratilgan platforma haqida to'liq ma'lumot tez orada."
+      description="Telefy — Malika elektronika bozori sotuvchilari uchun yaratilgan platforma haqida to'liq ma'lumot tez orada."
     />
   );
 }

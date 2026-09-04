@@ -8,7 +8,7 @@ import { ScrollReveal } from "@/components/landing/scroll-reveal";
 
 export function CtaSection() {
   return (
-    <section className="relative overflow-hidden bg-[#0d0f22] py-20 sm:py-28">
+    <section className="relative overflow-hidden bg-[#0d0f22] py-14 sm:py-28">
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <motion.div
           className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-primary-500/25 via-accent/15 to-transparent blur-[120px]"

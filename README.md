@@ -1,4 +1,4 @@
-# Malika Market
+# Telefy
 
 Malika elektronika bozori sotuvchilari uchun marketplace platforma. Next.js (App
 Router) + TypeScript (strict) + Tailwind CSS + Supabase (Postgres, Auth,

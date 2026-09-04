@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { Logo } from "@/components/ui/logo";
 
 export function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-border bg-secondary/30 pb-20 lg:pb-0">
       <div className="container grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-lg font-bold text-primary">Malika Market</p>
+          <Logo />
           <p className="mt-2 text-sm text-muted-foreground">
             Malika elektronika bozoridagi eng yaxshi takliflarni toping va solishtiring.
           </p>
@@ -35,7 +36,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="container border-t border-border py-4 text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Malika Market
+        © {new Date().getFullYear()} Telefy
       </div>
     </footer>
   );

@@ -10,8 +10,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: {
-    default: "Malika Market — Malika bozori onlayn",
-    template: "%s | Malika Market",
+    default: "Telefy — Malika bozori onlayn",
+    template: "%s | Telefy",
   },
   description:
     "Malika elektronika bozoridagi eng yaxshi takliflarni toping va solishtiring.",

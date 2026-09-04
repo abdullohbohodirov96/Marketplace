@@ -37,13 +37,13 @@ export function HeroSection() {
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0a0b18] to-transparent" />
       </div>
 
-      <div className="container relative grid items-center gap-10 pb-16 pt-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-6 lg:pb-24 lg:pt-16">
+      <div className="container relative grid items-center gap-8 pb-10 pt-6 sm:gap-10 sm:pb-16 sm:pt-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-6 lg:pb-24 lg:pt-16">
         <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
           <motion.span
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-white/70 backdrop-blur"
+            className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-white/70 backdrop-blur sm:mb-5 sm:gap-2 sm:px-3.5 sm:py-1.5 sm:text-xs"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-success" />
             Endi onlaynda — yuzlab sotuvchi, bitta platforma
@@ -53,7 +53,7 @@ export function HeroSection() {
             variants={container}
             initial="hidden"
             animate="show"
-            className="max-w-xl text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[3.4rem]"
+            className="max-w-xl text-[2.1rem] font-bold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-[3.4rem] lg:leading-[1.08]"
           >
             {HEADLINE_LINES.map((line) => (
               <motion.span key={line} variants={lineVariant} className="block">
@@ -77,7 +77,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="mt-5 max-w-md text-base text-white/60 sm:text-lg"
+            className="mt-4 max-w-md text-sm text-white/60 sm:mt-5 sm:text-lg"
           >
             Narxlarni solishtiring, eng ishonchli sotuvchini toping va bir necha soniyada
             buyurtma bering — hammasi bitta zamonaviy platformada.
@@ -87,22 +87,20 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.65 }}
-            className="mt-8 flex w-full max-w-md flex-col gap-3 sm:flex-row lg:w-auto"
+            className="mt-6 flex w-full max-w-md flex-col gap-2.5 sm:mt-8 sm:flex-row sm:gap-3 lg:w-auto"
           >
             <Button
-              size="lg"
               asChild
-              className="flex-1 bg-white text-[#0a0b18] shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_20px_40px_-15px_rgba(255,255,255,0.3)] hover:bg-white/90 sm:flex-none"
+              className="h-11 flex-1 bg-white px-5 text-sm text-[#0a0b18] shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_20px_40px_-15px_rgba(255,255,255,0.3)] hover:bg-white/90 sm:h-12 sm:flex-none sm:px-6 sm:text-base"
             >
               <Link href="/search">
                 Mahsulot qidirish <ArrowRight />
               </Link>
             </Button>
             <Button
-              size="lg"
               variant="outline"
               asChild
-              className="flex-1 border-white/15 bg-white/5 text-white backdrop-blur hover:bg-white/10 hover:text-white sm:flex-none"
+              className="h-11 flex-1 border-white/15 bg-white/5 px-5 text-sm text-white backdrop-blur hover:bg-white/10 hover:text-white sm:h-12 sm:flex-none sm:px-6 sm:text-base"
             >
               <Link href="/register?role=seller">
                 <PlayCircle />
@@ -115,18 +113,18 @@ export function HeroSection() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.85 }}
-            className="mt-10 flex items-center gap-6 text-white/40"
+            className="mt-7 flex items-center gap-4 text-white/40 sm:mt-10 sm:gap-6"
           >
-            <p className="text-xs">
-              <span className="text-lg font-bold text-white">500+</span> sotuvchi
+            <p className="text-[11px] sm:text-xs">
+              <span className="text-base font-bold text-white sm:text-lg">500+</span> sotuvchi
             </p>
-            <span className="h-8 w-px bg-white/10" />
-            <p className="text-xs">
-              <span className="text-lg font-bold text-white">10 000+</span> mahsulot
+            <span className="h-6 w-px bg-white/10 sm:h-8" />
+            <p className="text-[11px] sm:text-xs">
+              <span className="text-base font-bold text-white sm:text-lg">10 000+</span> mahsulot
             </p>
-            <span className="h-8 w-px bg-white/10" />
-            <p className="text-xs">
-              <span className="text-lg font-bold text-white">4.8</span> reyting
+            <span className="h-6 w-px bg-white/10 sm:h-8" />
+            <p className="text-[11px] sm:text-xs">
+              <span className="text-base font-bold text-white sm:text-lg">4.8</span> reyting
             </p>
           </motion.div>
         </div>

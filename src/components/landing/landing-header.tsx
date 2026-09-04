@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 
 export function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
@@ -25,9 +26,7 @@ export function LandingHeader() {
       }`}
     >
       <div className="container flex h-16 items-center gap-4 sm:h-20">
-        <Link href="/" className="shrink-0 text-lg font-bold tracking-tight text-white sm:text-xl">
-          Malika<span className="text-primary-400">Market</span>
-        </Link>
+        <Logo textClassName="text-white" iconClassName="h-8 w-auto sm:h-9" />
 
         <nav className="ml-auto hidden items-center gap-1 lg:flex">
           {[
