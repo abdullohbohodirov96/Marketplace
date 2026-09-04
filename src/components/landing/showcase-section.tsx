@@ -12,6 +12,35 @@ import {
 } from "lucide-react";
 import { ScrollReveal } from "@/components/landing/scroll-reveal";
 
+/**
+ * A small original storefront illustration (awning + building + door/window)
+ * for the "Do'kon sahifasi" preview card — an illustrated shop rather than a
+ * photo, since the demo store name shown here isn't a real seller yet.
+ */
+function MiniStorefrontIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 48" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* striped awning */}
+      <path d="M4 18 L10 6 H54 L60 18 Z" fill="white" fillOpacity="0.22" />
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <path
+          key={i}
+          d={`M${4 + i * 9.33} 18 L${9.6 + i * 7.4} 6 H${9.6 + i * 7.4 + 4.4} L${4 + i * 9.33 + 9.33} 18 Z`}
+          fill="white"
+          fillOpacity={i % 2 === 0 ? 0.32 : 0.14}
+        />
+      ))}
+      {/* building body */}
+      <rect x="8" y="18" width="48" height="26" rx="2" fill="white" fillOpacity="0.16" />
+      {/* window */}
+      <rect x="13" y="23" width="16" height="13" rx="1.5" fill="white" fillOpacity="0.28" />
+      {/* door */}
+      <rect x="35" y="23" width="14" height="21" rx="1.5" fill="white" fillOpacity="0.32" />
+      <circle cx="45.5" cy="33.5" r="1" fill="white" fillOpacity="0.6" />
+    </svg>
+  );
+}
+
 const SCREENS = [
   {
     icon: Store,
@@ -22,7 +51,7 @@ const SCREENS = [
     content: (
       <div className="space-y-2">
         <div className="relative flex h-16 flex-col justify-end overflow-hidden rounded-lg bg-gradient-to-br from-primary-400/60 to-primary-700/40 p-2">
-          <div className="absolute -right-3 -top-3 h-12 w-12 rounded-full bg-white/10" />
+          <MiniStorefrontIcon className="absolute -right-1 -top-1 h-11 w-auto" />
           <span className="text-[10px] font-semibold text-white">TechnoMall Malika</span>
           <span className="text-[8px] text-white/70">240+ mahsulot &middot; 4.8 &#9733;</span>
         </div>

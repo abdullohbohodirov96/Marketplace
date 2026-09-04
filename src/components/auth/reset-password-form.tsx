@@ -7,6 +7,7 @@ import {
   type ActionState,
 } from "@/app/(auth)/actions";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/auth/submit-button";
 import { FieldError } from "@/components/auth/field-error";
@@ -39,10 +40,9 @@ export function ResetPasswordForm({ phone }: { phone?: string }) {
 
       <div>
         <Label htmlFor="password">Yangi parol</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           className="mt-1.5"
           invalid={!!state.fieldErrors?.password}
@@ -53,10 +53,9 @@ export function ResetPasswordForm({ phone }: { phone?: string }) {
 
       <div>
         <Label htmlFor="confirmPassword">Yangi parolni tasdiqlang</Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
-          type="password"
           autoComplete="new-password"
           className="mt-1.5"
           invalid={!!state.fieldErrors?.confirmPassword}

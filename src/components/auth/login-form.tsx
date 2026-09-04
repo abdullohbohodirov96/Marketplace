@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { loginAction, type ActionState } from "@/app/(auth)/actions";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubmitButton } from "@/components/auth/submit-button";
@@ -38,10 +39,9 @@ export function LoginForm() {
             Parolni unutdingizmi?
           </Link>
         </div>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           className="mt-1.5"
           invalid={!!state.fieldErrors?.password}

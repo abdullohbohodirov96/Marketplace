@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import { registerAction, type ActionState } from "@/app/(auth)/actions";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SubmitButton } from "@/components/auth/submit-button";
@@ -125,10 +126,9 @@ export function RegisterForm() {
 
       <div>
         <Label htmlFor="password">Parol</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           className="mt-1.5"
           invalid={!!state.fieldErrors?.password}
@@ -140,10 +140,9 @@ export function RegisterForm() {
 
       <div>
         <Label htmlFor="confirmPassword">Parolni tasdiqlang</Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
-          type="password"
           autoComplete="new-password"
           className="mt-1.5"
           invalid={!!state.fieldErrors?.confirmPassword || passwordsMismatch}

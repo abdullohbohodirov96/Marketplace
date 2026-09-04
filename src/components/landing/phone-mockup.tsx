@@ -131,6 +131,13 @@ export function PhoneMockup() {
           />
         ))}
 
+        {/* idle float — a gentle, continuous bob so the phone is always in
+            motion on the page, not just while scrolling or hovering */}
+        <motion.div
+          animate={reduceMotion ? undefined : { y: [0, -14, 0] }}
+          transition={{ duration: 5, delay: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          className="relative [transform-style:preserve-3d]"
+        >
         {/* phone frame — outer layer drives the scroll-linked 3D spin */}
         <motion.div
           style={
@@ -210,6 +217,7 @@ export function PhoneMockup() {
               </div>
             </div>
           </motion.div>
+        </motion.div>
         </motion.div>
       </div>
     </div>
