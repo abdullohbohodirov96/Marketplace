@@ -11,17 +11,20 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("id, name_uz, slug")
-    .eq("is_active", true)
-    .is("parent_id", null)
-    .order("sort_order", { ascending: true })
-    .limit(6);
+  const [{ data: categories }, { data: userData }] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, name_uz, slug")
+      .eq("is_active", true)
+      .is("parent_id", null)
+      .order("sort_order", { ascending: true })
+      .limit(6),
+    supabase.auth.getUser(),
+  ]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-[#0a0b18]">
-      <LandingHeader />
+      <LandingHeader isLoggedIn={!!userData.user} />
 
       <main className="flex-1 pb-16 lg:pb-0">
         <HeroSection />
