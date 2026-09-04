@@ -1,0 +1,13 @@
+{
+  "name": "Malika Market",
+  "short_name": "Malika Market",
+  "description": "Malika elektronika bozoridagi eng yaxshi takliflarni toping va solishtiring.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#3730f0",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
