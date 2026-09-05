@@ -131,20 +131,26 @@ export function UsedDeviceForm({
             <FieldError messages={state.fieldErrors?.battery_health} />
           </div>
           <div>
-            <Label htmlFor="imei_last_digits">IMEI oxirgi 4 raqami (ixtiyoriy)</Label>
+            <Label htmlFor="imei">IMEI (ixtiyoriy)</Label>
             <Input
-              id="imei_last_digits"
-              name="imei_last_digits"
+              id="imei"
+              name="imei"
               type="text"
               inputMode="numeric"
-              maxLength={4}
-              placeholder="1234"
+              maxLength={16}
+              placeholder="356938035643809"
               className="mt-1.5"
-              invalid={!!state.fieldErrors?.imei_last_digits}
+              invalid={!!state.fieldErrors?.imei}
             />
-            <FieldError messages={state.fieldErrors?.imei_last_digits} />
+            <FieldError messages={state.fieldErrors?.imei} />
           </div>
         </div>
+
+        <p className="-mt-2 text-xs text-muted-foreground">
+          IMEI faqat shu telefonning boshqa e&rsquo;londa takror qo&rsquo;yilmaganini
+          tekshirish uchun ishlatiladi — u shifrlanadi va hech qachon ochiq holda
+          saqlanmaydi yoki ko&rsquo;rsatilmaydi (faqat oxirgi 4 raqami ko&rsquo;rinadi).
+        </p>
 
         <div>
           <Label>Umumiy holati</Label>

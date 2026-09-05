@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { uniqueSlug, slugify } from "@/lib/utils/slugify";
 import { uzPhoneRegex } from "@/lib/validations/auth";
+import { hashImei, imeiLastDigits, isValidImei } from "@/lib/utils/imei";
 import type { DeviceConditionGrade } from "@/types/database.types";
 
 export interface SellActionState {
@@ -273,7 +274,7 @@ export async function createUsedDeviceAction(
     | "unknown";
   const conditionGrade = String(formData.get("condition_grade") ?? "good") as DeviceConditionGrade;
   const warrantyDaysRaw = String(formData.get("warranty_days") ?? "0").replace(/[^0-9]/g, "");
-  const imeiLastDigits = String(formData.get("imei_last_digits") ?? "").replace(/[^0-9]/g, "");
+  const imeiRaw = String(formData.get("imei") ?? "").replace(/[^0-9]/g, "");
   const wasRepaired = formData.get("was_repaired") === "true";
   const boxAvailable = formData.get("box_available") === "true";
   const chargerAvailable = formData.get("charger_available") === "true";
@@ -294,8 +295,8 @@ export async function createUsedDeviceAction(
   if (!["like_new", "excellent", "good", "fair"].includes(conditionGrade)) {
     fieldErrors.condition_grade = ["Umumiy holatni tanlang"];
   }
-  if (imeiLastDigits && imeiLastDigits.length !== 4) {
-    fieldErrors.imei_last_digits = ["IMEI oxirgi 4 ta raqami kiriting"];
+  if (imeiRaw && !isValidImei(imeiRaw)) {
+    fieldErrors.imei = ["IMEI 14-16 ta raqamdan iborat bo'lishi kerak (odatda 15 ta)"];
   }
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
@@ -309,6 +310,12 @@ export async function createUsedDeviceAction(
   });
   if ("error" in variantResult) return { error: variantResult.error };
 
+  // The raw IMEI (imeiRaw) is used only to derive these two values and is
+  // never itself written to the database, logged, or returned to the
+  // client — see src/lib/utils/imei.ts.
+  const imeiHash = imeiRaw ? hashImei(imeiRaw) : null;
+  const imeiLastFour = imeiRaw ? imeiLastDigits(imeiRaw) : null;
+
   const { error: deviceError } = await supabase.from("used_device_units").insert({
     catalog_product_id: catalogResult.id,
     variant_id: variantResult.id,
@@ -320,7 +327,11 @@ export async function createUsedDeviceAction(
     screen_condition: screenCondition,
     condition_grade: conditionGrade,
     warranty_days: warrantyDaysRaw ? Number(warrantyDaysRaw) : 0,
-    imei_last_digits: imeiLastDigits || null,
+    imei_hash: imeiHash,
+    imei_last_digits: imeiLastFour,
+    // Self-reported by the seller, never platform-verified — the UI must
+    // never present this as an authoritative/checked fact (that's what
+    // telefy_check_status is for, and it's admin/moderator-only).
     imei_registered: false,
     was_repaired: wasRepaired,
     box_available: boxAvailable,
@@ -330,7 +341,15 @@ export async function createUsedDeviceAction(
     published_at: new Date().toISOString(),
   });
 
-  if (deviceError) return { error: deviceError.message };
+  if (deviceError) {
+    if (deviceError.code === "23505" && deviceError.message.includes("imei_hash")) {
+      return {
+        error: "Bu IMEI raqamli telefon marketplace'da allaqachon ro'yxatga olingan",
+        fieldErrors: { imei: ["Bu telefon allaqachon ro'yxatga olingan"] },
+      };
+    }
+    return { error: deviceError.message };
+  }
 
   revalidatePath("/sell/new");
   revalidatePath("/categories");

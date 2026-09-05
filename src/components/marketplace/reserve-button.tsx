@@ -7,14 +7,10 @@ import { createReservationAction } from "@/app/reservations/actions";
 import { Button } from "@/components/ui/button";
 
 export function ReserveButton({
-  storeId,
-  price,
   offerId,
   deviceId,
   isLoggedIn,
 }: {
-  storeId: string;
-  price: number;
   offerId?: string;
   deviceId?: string;
   isLoggedIn: boolean;
@@ -45,7 +41,7 @@ export function ReserveButton({
             return;
           }
           startTransition(async () => {
-            const result = await createReservationAction({ storeId, price, offerId, deviceId });
+            const result = await createReservationAction({ offerId, deviceId });
             if (result.error) setError(result.error);
             else setDone(true);
           });

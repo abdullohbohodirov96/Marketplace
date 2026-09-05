@@ -183,7 +183,7 @@ export default async function UsedDeviceDetailPage({
                     Bog&rsquo;lanish: {store.phone_primary}
                   </a>
                 </Button>
-                <ReserveButton storeId={store.id} price={device.price} deviceId={device.id} isLoggedIn={!!userData.user} />
+                <ReserveButton deviceId={device.id} isLoggedIn={!!userData.user} />
               </div>
             </div>
           </div>

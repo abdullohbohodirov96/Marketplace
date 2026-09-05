@@ -159,7 +159,7 @@ export default async function ProductDetailPage({
                     Bog&rsquo;lanish: {store.phone_primary}
                   </a>
                 </Button>
-                <ReserveButton storeId={store.id} price={offer.price} offerId={offer.id} isLoggedIn={!!userData.user} />
+                <ReserveButton offerId={offer.id} isLoggedIn={!!userData.user} />
               </div>
             </div>
           </div>

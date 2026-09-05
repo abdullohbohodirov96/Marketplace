@@ -16,10 +16,15 @@ const RESERVATION_HOLD_HOURS = 4;
  * so they can come pick it up at the market without it selling out from
  * under them. Exactly one of offerId/deviceId must be set (mirrors the
  * reservations_target_check constraint in 0026_reservations.sql).
+ *
+ * SECURITY: price and store_id are never accepted from the caller — a
+ * client-supplied price would let anyone reserve a phone at any price they
+ * choose. Both are looked up here from the offer/device row itself, and
+ * the reservations_validate_target trigger (0028_reservation_and_variant_
+ * hardening.sql) re-checks the same thing at the database level as
+ * defense-in-depth.
  */
 export async function createReservationAction(input: {
-  storeId: string;
-  price: number;
   offerId?: string;
   deviceId?: string;
   comment?: string;
@@ -30,14 +35,43 @@ export async function createReservationAction(input: {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Band qilish uchun avval tizimga kiring" };
 
+  if ((!input.offerId && !input.deviceId) || (input.offerId && input.deviceId)) {
+    return { error: "Noto'g'ri so'rov" };
+  }
+
+  let storeId: string;
+  let price: number;
+
+  if (input.offerId) {
+    const { data: offer, error } = await supabase
+      .from("product_offers")
+      .select("store_id, price, status")
+      .eq("id", input.offerId)
+      .maybeSingle();
+    if (error || !offer) return { error: "Taklif topilmadi" };
+    if (offer.status !== "active") return { error: "Bu taklif hozir mavjud emas" };
+    storeId = offer.store_id;
+    price = offer.price;
+  } else {
+    const { data: device, error } = await supabase
+      .from("used_device_units")
+      .select("store_id, price, status")
+      .eq("id", input.deviceId!)
+      .maybeSingle();
+    if (error || !device) return { error: "Mahsulot topilmadi" };
+    if (device.status !== "active") return { error: "Bu mahsulot hozir mavjud emas" };
+    storeId = device.store_id;
+    price = device.price;
+  }
+
   const expiresAt = new Date(Date.now() + RESERVATION_HOLD_HOURS * 60 * 60 * 1000).toISOString();
 
   const { error } = await supabase.from("reservations").insert({
     user_id: user.id,
-    store_id: input.storeId,
+    store_id: storeId,
     product_offer_id: input.offerId ?? null,
     used_device_unit_id: input.deviceId ?? null,
-    price_locked: input.price,
+    price_locked: price,
     customer_comment: input.comment?.trim() || null,
     expires_at: expiresAt,
     status: "pending",
