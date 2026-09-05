@@ -36,6 +36,18 @@ export default async function StoreDetailPage({
 
   if (!store || store.status !== "approved") notFound();
 
+  // Fire-and-forget analytics — a logging failure (RLS hiccup, network
+  // blip) must never break the page for the visitor. See
+  // analytics_events_insert in 0018_row_level_security.sql (user_id must be
+  // null or the caller's own id) and the store_views view in
+  // 0016_analytics.sql that the admin/seller dashboards read this back
+  // through.
+  supabase.auth.getUser().then(({ data: { user } }) => {
+    void supabase
+      .from("analytics_events")
+      .insert({ event_type: "store_view", store_id: store.id, user_id: user?.id ?? null, source_page: "store_detail" });
+  });
+
   const [{ data: rawOffers }, { data: rawUsedDevices }] = await Promise.all([
     supabase
       .from("product_offers")

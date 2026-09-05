@@ -1,4 +1,4 @@
-import { Users, Store, Tag, UserPlus, Clock } from "lucide-react";
+import { Users, Store, Tag, UserPlus, Clock, Eye, CalendarClock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
 async function getStats() {
@@ -14,6 +14,9 @@ async function getStats() {
     pendingStores,
     totalOffers,
     activeOffers,
+    totalStoreViews,
+    storeViewsToday,
+    activeReservations,
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }),
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "seller"),
@@ -25,6 +28,12 @@ async function getStats() {
     supabase.from("stores").select("*", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("product_offers").select("*", { count: "exact", head: true }),
     supabase.from("product_offers").select("*", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("store_views").select("*", { count: "exact", head: true }),
+    supabase.from("store_views").select("*", { count: "exact", head: true }).gte("created_at", startOfToday.toISOString()),
+    supabase
+      .from("reservations")
+      .select("*", { count: "exact", head: true })
+      .in("status", ["pending", "seller_confirmed", "customer_arrived"]),
   ]);
 
   return {
@@ -35,11 +44,50 @@ async function getStats() {
     pendingStores: pendingStores.count ?? 0,
     totalOffers: totalOffers.count ?? 0,
     activeOffers: activeOffers.count ?? 0,
+    totalStoreViews: totalStoreViews.count ?? 0,
+    storeViewsToday: storeViewsToday.count ?? 0,
+    activeReservations: activeReservations.count ?? 0,
   };
 }
 
+async function getTopStoresByViews() {
+  const supabase = await createClient();
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+
+  const { data: views } = await supabase
+    .from("store_views")
+    .select("store_id")
+    .gte("created_at", since.toISOString())
+    .not("store_id", "is", null)
+    .limit(5000);
+
+  if (!views || views.length === 0) return [];
+
+  const countByStore = new Map<string, number>();
+  for (const v of views) {
+    if (!v.store_id) continue;
+    countByStore.set(v.store_id, (countByStore.get(v.store_id) ?? 0) + 1);
+  }
+  const topIds = [...countByStore.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  if (topIds.length === 0) return [];
+
+  const { data: stores } = await supabase
+    .from("stores")
+    .select("id, name, slug")
+    .in("id", topIds.map(([id]) => id));
+  const storeById = new Map((stores ?? []).map((s) => [s.id, s]));
+
+  return topIds
+    .map(([id, count]) => {
+      const store = storeById.get(id);
+      return store ? { id, name: store.name, slug: store.slug, count } : null;
+    })
+    .filter((x): x is { id: string; name: string; slug: string; count: number } => x !== null);
+}
+
 export default async function AdminDashboardPage() {
-  const stats = await getStats();
+  const [stats, topStores] = await Promise.all([getStats(), getTopStoresByViews()]);
 
   const cards = [
     { label: "Jami foydalanuvchilar", value: stats.totalUsers, icon: Users },
@@ -49,6 +97,9 @@ export default async function AdminDashboardPage() {
     { label: "Tasdiqni kutayotgan do'konlar", value: stats.pendingStores, icon: Store },
     { label: "Jami e'lonlar", value: stats.totalOffers, icon: Tag },
     { label: "Faol e'lonlar", value: stats.activeOffers, icon: Tag },
+    { label: "Faol band qilishlar", value: stats.activeReservations, icon: CalendarClock },
+    { label: "Bugungi do'kon tashriflari", value: stats.storeViewsToday, icon: Eye },
+    { label: "Jami do'kon tashriflari", value: stats.totalStoreViews, icon: Eye },
   ];
 
   return (
@@ -70,14 +121,29 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="mt-8 rounded-xl border border-dashed border-border bg-secondary/30 p-6 text-sm text-muted-foreground">
-        <p className="font-medium text-foreground">Tez orada shu yerda:</p>
-        <p className="mt-1">
-          Har bir do&rsquo;konga kunlik/oylik tashrif soni, qo&rsquo;ng&rsquo;iroq tugmasi bosilishlari,
-          bog&rsquo;lanishlar va yuborilgan SMS&rsquo;lar bo&rsquo;yicha to&rsquo;liq statistika. Buning uchun
-          saytda voqealarni (event) yozib boruvchi kuzatuv qo&rsquo;shilishi kerak — bu
-          navbatdagi ish sifatida qo&rsquo;shiladi.
-        </p>
+      <div className="mt-8">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">
+          Eng ko&rsquo;p ko&rsquo;rilgan do&rsquo;konlar (oxirgi 30 kun)
+        </h2>
+        {topStores.length > 0 ? (
+          <div className="overflow-hidden rounded-xl border border-border bg-background">
+            {topStores.map((s, i) => (
+              <div
+                key={s.id}
+                className={`flex items-center gap-3 px-4 py-3 text-sm ${i > 0 ? "border-t border-border" : ""}`}
+              >
+                <span className="w-5 shrink-0 text-muted-foreground">{i + 1}.</span>
+                <span className="flex-1 truncate font-medium text-foreground">{s.name}</span>
+                <span className="shrink-0 text-muted-foreground">{s.count.toLocaleString("uz-UZ")} tashrif</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border bg-secondary/30 p-6 text-sm text-muted-foreground">
+            Hali hech qanday do&rsquo;kon tashrifi qayd etilmagan. Xaridorlar do&rsquo;kon sahifalarini
+            ko&rsquo;rgach, bu yerda statistika ko&rsquo;rina boshlaydi.
+          </div>
+        )}
       </div>
     </div>
   );

@@ -37,6 +37,26 @@ export type ReservationStatus =
   | "cancelled"
   | "expired";
 
+export type AnalyticsEventType =
+  | "product_view"
+  | "store_view"
+  | "search"
+  | "filter_used"
+  | "no_result_search"
+  | "favorite_added"
+  | "favorite_removed"
+  | "compare_added"
+  | "phone_clicked"
+  | "telegram_clicked"
+  | "instagram_clicked"
+  | "location_clicked"
+  | "directions_clicked"
+  | "shared"
+  | "price_alert_created"
+  | "request_created"
+  | "proposal_sent"
+  | "review_created";
+
 export interface Database {
   public: {
     Tables: {
@@ -408,6 +428,27 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["favorites"]["Row"]>;
       };
+      analytics_events: {
+        Row: {
+          id: string;
+          event_type: AnalyticsEventType;
+          user_id: string | null;
+          session_id: string | null;
+          catalog_product_id: string | null;
+          product_offer_id: string | null;
+          store_id: string | null;
+          search_query: string | null;
+          source_page: string | null;
+          referrer: string | null;
+          device_type: "mobile" | "tablet" | "desktop" | "unknown" | null;
+          created_at: string;
+        };
+        Relationships: [];
+        Insert: Partial<Database["public"]["Tables"]["analytics_events"]["Row"]> & {
+          event_type: AnalyticsEventType;
+        };
+        Update: Partial<Database["public"]["Tables"]["analytics_events"]["Row"]>;
+      };
       notifications: {
         Row: {
           id: string;
@@ -485,7 +526,39 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["plans"]["Row"]>;
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      store_views: {
+        Row: {
+          id: string;
+          store_id: string | null;
+          user_id: string | null;
+          session_id: string | null;
+          created_at: string;
+        };
+        Relationships: [];
+      };
+      product_views: {
+        Row: {
+          id: string;
+          product_offer_id: string | null;
+          user_id: string | null;
+          session_id: string | null;
+          created_at: string;
+        };
+        Relationships: [];
+      };
+      contact_clicks: {
+        Row: {
+          id: string;
+          store_id: string | null;
+          product_offer_id: string | null;
+          user_id: string | null;
+          channel: AnalyticsEventType;
+          created_at: string;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_moderator_or_admin: { Args: Record<string, never>; Returns: boolean };

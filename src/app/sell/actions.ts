@@ -102,6 +102,98 @@ export async function createStoreAction(
   return { success: true };
 }
 
+const LOGO_MAX_BYTES = 5 * 1024 * 1024;
+const LOGO_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const LOGO_EXT_BY_TYPE: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+/**
+ * Uploads the seller's own store logo into the already-provisioned
+ * 'store-branding' storage bucket (0020_storage_buckets.sql — public read,
+ * is_store_member(store_id)-gated write, keyed by first path segment =
+ * store_id). Each upload gets a fresh timestamped filename rather than
+ * overwriting in place, so a stale cached copy of the old logo is never
+ * served after a change.
+ */
+export async function updateStoreLogoAction(_prevState: SellActionState, formData: FormData): Promise<SellActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Avval tizimga kiring" };
+
+  const { data: store } = await supabase.from("stores").select("id").eq("owner_id", user.id).maybeSingle();
+  if (!store) return { error: "Avval do'kon yarating" };
+
+  const file = formData.get("logo");
+  if (!(file instanceof File) || file.size === 0) return { error: "Rasm tanlanmadi" };
+  if (!LOGO_ALLOWED_TYPES.includes(file.type)) return { error: "Faqat JPG, PNG yoki WEBP formatidagi rasm yuklang" };
+  if (file.size > LOGO_MAX_BYTES) return { error: "Rasm hajmi 5MB dan oshmasligi kerak" };
+
+  const ext = LOGO_EXT_BY_TYPE[file.type] ?? "jpg";
+  const path = `${store.id}/logo-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage.from("store-branding").upload(path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (uploadError) return { error: uploadError.message };
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("store-branding").getPublicUrl(path);
+
+  const { error: updateError } = await supabase.from("stores").update({ logo_url: publicUrl }).eq("id", store.id);
+  if (updateError) return { error: updateError.message };
+
+  revalidatePath("/sell/new");
+  revalidatePath("/stores");
+  revalidatePath("/map");
+  return { success: true };
+}
+
+/**
+ * Sets the seller's primary store_locations pin (lat/lng) — used by the
+ * /map page and by anything that shows "how far is this store". Indoor
+ * bazaar shops rarely have their own GPS-precise pin, so this is a
+ * best-effort "point on the map roughly where the shop is" rather than a
+ * surveyed address; block/row/shop_number (set at store creation) remain
+ * the authoritative in-market address.
+ */
+export async function updateStoreLocationAction(_prevState: SellActionState, formData: FormData): Promise<SellActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Avval tizimga kiring" };
+
+  const latitude = Number(formData.get("latitude"));
+  const longitude = Number(formData.get("longitude"));
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return { error: "Xaritadan joylashuvni tanlang" };
+  }
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return { error: "Noto'g'ri koordinata" };
+  }
+
+  const { data: store } = await supabase.from("stores").select("id").eq("owner_id", user.id).maybeSingle();
+  if (!store) return { error: "Avval do'kon yarating" };
+
+  const { error } = await supabase
+    .from("store_locations")
+    .update({ latitude, longitude })
+    .eq("store_id", store.id)
+    .eq("is_primary", true);
+  if (error) return { error: error.message };
+
+  revalidatePath("/sell/new");
+  revalidatePath("/map");
+  return { success: true };
+}
+
 /**
  * Finds an existing catalog product for this title+category (simple
  * slug-based match — avoids an obvious duplicate like two sellers both

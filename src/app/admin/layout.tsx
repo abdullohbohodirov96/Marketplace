@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, Users, Store, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, Store, ShieldCheck, Tag } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/ui/logo";
 
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Umumiy ko'rinish", icon: LayoutDashboard },
+  { href: "/admin/categories", label: "Kategoriyalar", icon: Tag },
   { href: "/admin", label: "Foydalanuvchilar", icon: Users, disabled: true },
   { href: "/admin", label: "Do'konlar", icon: Store, disabled: true },
 ];

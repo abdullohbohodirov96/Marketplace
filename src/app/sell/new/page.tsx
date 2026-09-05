@@ -12,6 +12,8 @@ import { ListingTabs } from "@/components/sell/listing-tabs";
 import { BecomeSellerButton } from "@/components/sell/become-seller-button";
 import { ReservationRow } from "@/components/sell/reservation-row";
 import { ProductThumb } from "@/components/marketplace/product-thumb";
+import { StoreLogoUpload } from "@/components/sell/store-logo-upload";
+import { StoreLocationPicker } from "@/components/sell/store-location-picker";
 
 export const metadata: Metadata = { title: "Mahsulot qo'shish" };
 
@@ -49,11 +51,23 @@ export default async function SellNewPage() {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, name, status")
+    .select("id, name, status, logo_url")
     .eq("owner_id", user.id)
     .maybeSingle();
 
-  const [{ data: categories }, { data: offers }, { data: usedDevices }, { data: reservations }] = await Promise.all([
+  const { data: primaryLocation } = store
+    ? await supabase
+        .from("store_locations")
+        .select("latitude, longitude")
+        .eq("store_id", store.id)
+        .eq("is_primary", true)
+        .maybeSingle()
+    : { data: null };
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const [{ data: categories }, { data: offers }, { data: usedDevices }, { data: reservations }, totalViews, viewsToday] = await Promise.all([
     supabase
       .from("categories")
       .select("id, name_uz")
@@ -84,6 +98,16 @@ export default async function SellNewPage() {
           .in("status", ["pending", "seller_confirmed", "customer_arrived"])
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: null }),
+    store
+      ? supabase.from("store_views").select("*", { count: "exact", head: true }).eq("store_id", store.id)
+      : Promise.resolve({ count: null }),
+    store
+      ? supabase
+          .from("store_views")
+          .select("*", { count: "exact", head: true })
+          .eq("store_id", store.id)
+          .gte("created_at", startOfToday.toISOString())
+      : Promise.resolve({ count: null }),
   ]);
 
   const catalogIds = [
@@ -158,6 +182,31 @@ export default async function SellNewPage() {
                   qo&rsquo;shishingiz mumkin, tasdiqlangach ular marketplace&rsquo;da ko&rsquo;rinadi.
                 </p>
               )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Bugungi tashriflar</p>
+                  <p className="mt-1 text-2xl font-bold text-foreground">{(viewsToday.count ?? 0).toLocaleString("uz-UZ")}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-background p-4">
+                  <p className="text-xs font-medium text-muted-foreground">Jami tashriflar</p>
+                  <p className="mt-1 text-2xl font-bold text-foreground">{(totalViews.count ?? 0).toLocaleString("uz-UZ")}</p>
+                </div>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Do&rsquo;kon sozlamalari</CardTitle>
+                  <CardDescription>Logotip va xaritadagi joylashuv — xaridorlar shuni ko&rsquo;radi.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-6">
+                  <StoreLogoUpload currentLogoUrl={store.logo_url} />
+                  <StoreLocationPicker
+                    latitude={primaryLocation?.latitude ?? null}
+                    longitude={primaryLocation?.longitude ?? null}
+                  />
+                </CardContent>
+              </Card>
 
               {reservations && reservations.length > 0 && (
                 <div>
