@@ -64,10 +64,19 @@ Ishlaydigan skriptlar:
    done
    ```
 
-   Migrationlar `supabase/migrations/0001...` dan `0020...` gacha raqamlangan
+   Migrationlar `supabase/migrations/0001...` dan boshlab raqamlangan
    va **ketma-ket** qo'llanishi shart (har biri oldingisiga bog'liq).
    Barchasi mahalliy Postgres 16 instansiyasida sinovdan o'tkazilgan —
-   xatosiz o'tadi.
+   xatosiz o'tadi. Joriy soni uchun `ls supabase/migrations/ | wc -l`
+   ishlating — bu yerda qattiq sonni yozib qo'yish tez eskiradi.
+
+   **C) `npm run db:migrate` orqali** — yuqoridagi ikkalasiga muqobil,
+   `DATABASE_URL`ni `.env.local`ga qo'shib qo'ying (pastga qarang), skript
+   qaysi fayllar hali qo'llanmaganini o'zi kuzatadi (`public._migrations`
+   jadvali), shuning uchun uni istalgancha marta qayta ishga tushirsa
+   bo'ladi. `npm run db:seed` esa faqat qo'shimcha dev fixture'larni
+   (masalan, `brands`) qo'shadi — sxema uchun zarur seed (kategoriyalar,
+   asosiy bozor) migration sifatida keladi.
 
 4. **Auth sozlamalari** (Authentication → Settings):
    - Email confirmation: yoqilgan bo'lsa, "Confirm email" o'chirib
@@ -152,7 +161,7 @@ src/
   i18n/                   uz (asosiy) / ru (tayyor, keyin to'ldiriladi) lug'atlari
   types/database.types.ts Supabase generated types o'rnini bosuvchi qo'lda yozilgan tiplar
 supabase/
-  migrations/             0001...0020 — to'liq database sxemasi (pastga qarang)
+  migrations/             0001... — to'liq database sxemasi (pastga qarang)
 scripts/
   local-supabase-shim.sql Faqat local test uchun (auth/storage sxema stub'lari)
 ```
@@ -167,16 +176,30 @@ Har ikkisi ham **server va database darajasida** (RLS orqali) tekshiriladi
 
 ### Database sxemasi
 
-63 ta jadval, 128 ta RLS siyosati, 20 ta migration fayli. To'liq ro'yxat va
+68+ ta jadval, 167+ ta RLS siyosati, 27+ ta migration fayli (aniq son tez
+o'zgaradi — `ls supabase/migrations/ | wc -l` ishonchli manba). To'liq ro'yxat va
 har bir jadvalning vazifasi `supabase/migrations/*.sql` fayllaridagi
 izohlarda. Asosiy bloklar:
 
 - **Identity**: `profiles`, `roles`
+- **Markets**: `markets` (Malika va keyingi bozorlar) — `store_locations`
+  endi `market_id` + indoor manzil (`block`/`floor`/`row_label`/
+  `shop_number`) orqali qaysi bozor/qaysi qatorda ekanini bildiradi
 - **Stores**: `stores`, `store_members`, `store_locations` (= filiallar),
   `store_schedules`, `store_verifications`
-- **Catalog**: `catalog_products` (kanonik mahsulot) + `product_offers`
-  (sotuvchi taklifi) — narx solishtirish shu ajratishga asoslanadi;
-  `product_aliases`, `product_merge_history`, `branch_inventory`
+- **Catalog**: `catalog_products` (kanonik model, masalan "iPhone 16 Pro")
+  → `product_variants` (aniq SKU: xotira/rang) → `product_offers` (sotuvchi
+  taklifi, yangi telefon uchun) — narx solishtirish shu ajratishga
+  asoslanadi; `product_aliases`, `product_merge_history`, `branch_inventory`
+- **Ishlatilgan telefonlar**: `used_device_units` — har biri bitta real
+  fizik qurilma (IMEI, batareya holati, ta'mirlanganmi va h.k.),
+  `product_offers`dan alohida jadval; `used_device_checklist_items` —
+  Telefy Check tekshiruvining har bir bandi bo'yicha audit tarixi.
+  `telefy_check_status`ni faqat moderator/admin o'zgartira oladi (bazadagi
+  trigger orqali majburlangan — sotuvchi o'zini o'zi tasdiqlay olmaydi)
+- **Band qilish**: `reservations` — "narxni band qilish" oqimi
+  (pending → seller_confirmed → customer_arrived → purchased), keyinchalik
+  "verified purchase" izohlar shunga tayanadi (`has_completed_purchase()`)
 - **Narx**: `price_history`, `price_alerts`, `availability_confirmations`
 - **Mijoz**: `favorites`, `saved_stores`, `product_comparisons`,
   `search_history`, `saved_searches`
@@ -234,7 +257,7 @@ funksiyasi; har doim serverda tekshiring, clientga ishonmang.
 | `npm run typecheck` | ✅ Xatosiz |
 | `npm run lint` | ✅ Xatosiz |
 | `npm run build` | ✅ Muvaffaqiyatli (barcha sahifalar generatsiya qilindi) |
-| Migrationlar (0001→0020, mahalliy Postgres 16) | ✅ Ketma-ket, xatosiz qo'llandi |
+| Migrationlar (0001→hozirgi oxirigacha, mahalliy Postgres 16) | ✅ Ketma-ket, xatosiz qo'llandi |
 | Trigger sinovi: ro'yxatdan o'tish → profile+preferences avtomatik yaratiladi | ✅ |
 | Trigger sinovi: do'kon yaratish → owner a'zoligi + FREE subscription avtomatik | ✅ |
 | Trigger sinovi: narx o'zgarishi → `price_history`ga yoziladi | ✅ (1 ta real xato topilib tuzatildi — pastga qarang) |

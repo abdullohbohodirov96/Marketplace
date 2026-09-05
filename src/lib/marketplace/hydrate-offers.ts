@@ -15,24 +15,41 @@ export interface RawOffer {
   store_id: string;
 }
 
+export interface RawUsedDevice {
+  id: string;
+  slug: string;
+  title: string | null;
+  price: number;
+  battery_health: number | null;
+  telefy_check_status: string;
+  catalog_product_id: string;
+  store_id: string;
+}
+
+interface CatalogLookup {
+  catalogById: Map<string, { id: string; name: string; category_id: string }>;
+  categorySlugById: Map<string, string>;
+  storeById: Map<string, { id: string; name: string }>;
+}
+
 /**
  * The hand-maintained database.types.ts has no FK relationship metadata, so
  * Supabase's nested `select("foo(bar)")` embedding can't be typed safely
  * here. Instead we fetch the three tables flat and join them in memory —
  * fine at this scale (a single category/search/store page of results).
  */
-export async function hydrateOfferCards(
+async function buildCatalogLookup(
   supabase: Supabase,
-  offers: RawOffer[],
-): Promise<ProductCardData[]> {
-  if (offers.length === 0) return [];
-
-  const catalogIds = [...new Set(offers.map((o) => o.catalog_product_id))];
-  const storeIds = [...new Set(offers.map((o) => o.store_id))];
-
+  catalogIds: string[],
+  storeIds: string[],
+): Promise<CatalogLookup> {
   const [{ data: catalogProducts }, { data: stores }] = await Promise.all([
-    supabase.from("catalog_products").select("id, name, category_id").in("id", catalogIds),
-    supabase.from("stores").select("id, name").in("id", storeIds),
+    catalogIds.length
+      ? supabase.from("catalog_products").select("id, name, category_id").in("id", catalogIds)
+      : Promise.resolve({ data: [] as { id: string; name: string; category_id: string }[] }),
+    storeIds.length
+      ? supabase.from("stores").select("id, name").in("id", storeIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ]);
 
   const categoryIds = [...new Set((catalogProducts ?? []).map((c) => c.category_id))];
@@ -40,9 +57,21 @@ export async function hydrateOfferCards(
     ? await supabase.from("categories").select("id, slug").in("id", categoryIds)
     : { data: [] as { id: string; slug: string }[] };
 
-  const catalogById = new Map((catalogProducts ?? []).map((c) => [c.id, c]));
-  const categorySlugById = new Map((categories ?? []).map((c) => [c.id, c.slug]));
-  const storeById = new Map((stores ?? []).map((s) => [s.id, s]));
+  return {
+    catalogById: new Map((catalogProducts ?? []).map((c) => [c.id, c])),
+    categorySlugById: new Map((categories ?? []).map((c) => [c.id, c.slug])),
+    storeById: new Map((stores ?? []).map((s) => [s.id, s])),
+  };
+}
+
+export async function hydrateOfferCards(supabase: Supabase, offers: RawOffer[]): Promise<ProductCardData[]> {
+  if (offers.length === 0) return [];
+
+  const { catalogById, categorySlugById, storeById } = await buildCatalogLookup(
+    supabase,
+    [...new Set(offers.map((o) => o.catalog_product_id))],
+    [...new Set(offers.map((o) => o.store_id))],
+  );
 
   return offers.map((offer) => {
     const catalogProduct = catalogById.get(offer.catalog_product_id);
@@ -55,6 +84,36 @@ export async function hydrateOfferCards(
       condition: offer.condition === "used" ? "used" : "new",
       storeName: storeById.get(offer.store_id)?.name ?? null,
       categorySlug: categorySlug ?? null,
+    };
+  });
+}
+
+/** Same shape as hydrateOfferCards, for used_device_units instead of product_offers. */
+export async function hydrateUsedDeviceCards(
+  supabase: Supabase,
+  devices: RawUsedDevice[],
+): Promise<ProductCardData[]> {
+  if (devices.length === 0) return [];
+
+  const { catalogById, categorySlugById, storeById } = await buildCatalogLookup(
+    supabase,
+    [...new Set(devices.map((d) => d.catalog_product_id))],
+    [...new Set(devices.map((d) => d.store_id))],
+  );
+
+  return devices.map((device) => {
+    const catalogProduct = catalogById.get(device.catalog_product_id);
+    const categorySlug = catalogProduct ? categorySlugById.get(catalogProduct.category_id) : null;
+    return {
+      slug: device.slug,
+      title: device.title || catalogProduct?.name || "Ishlatilgan telefon",
+      price: device.price,
+      condition: "used" as const,
+      storeName: storeById.get(device.store_id)?.name ?? null,
+      categorySlug: categorySlug ?? null,
+      isUsed: true,
+      batteryHealth: device.battery_health,
+      telefyCheckPassed: device.telefy_check_status === "passed" || device.telefy_check_status === "passed_with_notes",
     };
   });
 }

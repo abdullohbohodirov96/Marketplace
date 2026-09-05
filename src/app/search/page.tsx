@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Search as SearchIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { hydrateOfferCards, type RawOffer } from "@/lib/marketplace/hydrate-offers";
+import { hydrateOfferCards, hydrateUsedDeviceCards, type RawOffer, type RawUsedDevice } from "@/lib/marketplace/hydrate-offers";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -20,41 +20,71 @@ export default async function SearchPage({
   const supabase = await createClient();
 
   let rawOffers: RawOffer[] = [];
+  let rawUsedDevices: RawUsedDevice[] = [];
 
   if (query.length >= 2) {
+    // catalog_products/product_offers carry a generated tsvector column
+    // (weighted name/model/description, unaccented — see
+    // 0019_search.sql) so a typo-tolerant, Latin/Cyrillic-insensitive
+    // search just means using it instead of a plain ilike scan.
     const { data: matchingCatalogProducts } = await supabase
       .from("catalog_products")
       .select("id")
       .eq("status", "approved")
-      .ilike("name", `%${query}%`);
+      .textSearch("search_vector", query, { type: "websearch", config: "simple" });
 
     const catalogIds = (matchingCatalogProducts ?? []).map((c) => c.id);
 
-    const [{ data: offersByCatalog }, { data: offersByName }] = await Promise.all([
-      catalogIds.length
-        ? supabase
-            .from("product_offers")
-            .select("id, slug, seller_product_name, price, old_price, condition, catalog_product_id, store_id")
-            .in("catalog_product_id", catalogIds)
-            .eq("status", "active")
-            .is("deleted_at", null)
-        : Promise.resolve({ data: [] as RawOffer[] }),
-      supabase
-        .from("product_offers")
-        .select("id, slug, seller_product_name, price, old_price, condition, catalog_product_id, store_id")
-        .ilike("seller_product_name", `%${query}%`)
-        .eq("status", "active")
-        .is("deleted_at", null),
-    ]);
+    const [{ data: offersByCatalog }, { data: offersByName }, { data: devicesByCatalog }, { data: devicesByTitle }] =
+      await Promise.all([
+        catalogIds.length
+          ? supabase
+              .from("product_offers")
+              .select("id, slug, seller_product_name, price, old_price, condition, catalog_product_id, store_id")
+              .in("catalog_product_id", catalogIds)
+              .eq("status", "active")
+              .is("deleted_at", null)
+          : Promise.resolve({ data: [] as RawOffer[] }),
+        supabase
+          .from("product_offers")
+          .select("id, slug, seller_product_name, price, old_price, condition, catalog_product_id, store_id")
+          .textSearch("search_vector", query, { type: "websearch", config: "simple" })
+          .eq("status", "active")
+          .is("deleted_at", null),
+        catalogIds.length
+          ? supabase
+              .from("used_device_units")
+              .select("id, slug, title, price, battery_health, telefy_check_status, catalog_product_id, store_id")
+              .in("catalog_product_id", catalogIds)
+              .eq("status", "active")
+              .is("deleted_at", null)
+          : Promise.resolve({ data: [] as RawUsedDevice[] }),
+        supabase
+          .from("used_device_units")
+          .select("id, slug, title, price, battery_health, telefy_check_status, catalog_product_id, store_id")
+          .ilike("title", `%${query}%`)
+          .eq("status", "active")
+          .is("deleted_at", null),
+      ]);
 
-    const byId = new Map<string, RawOffer>();
+    const offerById = new Map<string, RawOffer>();
     for (const offer of [...(offersByCatalog ?? []), ...(offersByName ?? [])]) {
-      byId.set(offer.id, offer);
+      offerById.set(offer.id, offer);
     }
-    rawOffers = [...byId.values()];
+    rawOffers = [...offerById.values()];
+
+    const deviceById = new Map<string, RawUsedDevice>();
+    for (const device of [...(devicesByCatalog ?? []), ...(devicesByTitle ?? [])]) {
+      deviceById.set(device.id, device);
+    }
+    rawUsedDevices = [...deviceById.values()];
   }
 
-  const products = await hydrateOfferCards(supabase, rawOffers);
+  const [newProducts, usedProducts] = await Promise.all([
+    hydrateOfferCards(supabase, rawOffers),
+    hydrateUsedDeviceCards(supabase, rawUsedDevices),
+  ]);
+  const products = [...newProducts, ...usedProducts];
 
   return (
     <div className="flex min-h-dvh flex-col">

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Phone, Store, ShieldCheck, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ProductThumb } from "@/components/marketplace/product-thumb";
+import { ReserveButton } from "@/components/marketplace/reserve-button";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -27,20 +28,38 @@ async function getOfferBySlug(slug: string) {
 
   if (!offer) return null;
 
-  const [{ data: catalogProduct }, { data: store }] = await Promise.all([
+  const [{ data: catalogProduct }, { data: store }, { data: otherOffersRaw }] = await Promise.all([
     supabase.from("catalog_products").select("name, category_id").eq("id", offer.catalog_product_id).maybeSingle(),
     supabase
       .from("stores")
       .select("id, name, slug, phone_primary, verified, status")
       .eq("id", offer.store_id)
       .maybeSingle(),
+    supabase
+      .from("product_offers")
+      .select("id, slug, price, store_id")
+      .eq("catalog_product_id", offer.catalog_product_id)
+      .eq("status", "active")
+      .is("deleted_at", null)
+      .neq("id", offer.id)
+      .order("price", { ascending: true })
+      .limit(5),
   ]);
 
   const { data: category } = catalogProduct
     ? await supabase.from("categories").select("slug, name_uz").eq("id", catalogProduct.category_id).maybeSingle()
     : { data: null };
 
-  return { offer, catalogProduct, store, category };
+  const otherStoreIds = [...new Set((otherOffersRaw ?? []).map((o) => o.store_id))];
+  const { data: otherStores } = otherStoreIds.length
+    ? await supabase.from("stores").select("id, name").in("id", otherStoreIds).eq("status", "approved")
+    : { data: [] as { id: string; name: string }[] };
+  const otherStoreNameById = new Map((otherStores ?? []).map((s) => [s.id, s.name]));
+  const otherOffers = (otherOffersRaw ?? [])
+    .filter((o) => otherStoreNameById.has(o.store_id))
+    .map((o) => ({ ...o, storeName: otherStoreNameById.get(o.store_id)! }));
+
+  return { offer, catalogProduct, store, category, otherOffers };
 }
 
 export async function generateMetadata({
@@ -60,13 +79,14 @@ export default async function ProductDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const result = await getOfferBySlug(slug);
+  const supabase = await createClient();
+  const [result, { data: userData }] = await Promise.all([getOfferBySlug(slug), supabase.auth.getUser()]);
 
   if (!result || result.offer.status !== "active" || !result.store || result.store.status !== "approved") {
     notFound();
   }
 
-  const { offer, catalogProduct, store, category } = result;
+  const { offer, catalogProduct, store, category, otherOffers } = result;
   const title = offer.seller_product_name || catalogProduct?.name || "Mahsulot";
   const hasDiscount = !!offer.old_price && offer.old_price > offer.price;
 
@@ -139,9 +159,28 @@ export default async function ProductDetailPage({
                     Bog&rsquo;lanish: {store.phone_primary}
                   </a>
                 </Button>
+                <ReserveButton storeId={store.id} price={offer.price} offerId={offer.id} isLoggedIn={!!userData.user} />
               </div>
             </div>
           </div>
+
+          {otherOffers.length > 0 && (
+            <div className="mt-10">
+              <h2 className="mb-3 text-lg font-semibold text-foreground">Boshqa do&rsquo;konlarda narxi</h2>
+              <div className="flex flex-col divide-y divide-border rounded-xl border border-border bg-card">
+                {otherOffers.map((o) => (
+                  <Link
+                    key={o.id}
+                    href={`/product/${o.slug}`}
+                    className="flex items-center justify-between gap-3 px-4 py-3 text-sm transition-colors hover:bg-secondary/60"
+                  >
+                    <span className="font-medium text-foreground">{o.storeName}</span>
+                    <span className="font-semibold text-foreground">{formatPrice(o.price)} so&rsquo;m</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
       <SiteFooter />

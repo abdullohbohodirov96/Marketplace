@@ -52,6 +52,24 @@ export function StoreForm() {
         />
       </div>
 
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <Label htmlFor="block">Blok</Label>
+          <Input id="block" name="block" placeholder="B" className="mt-1.5" />
+        </div>
+        <div>
+          <Label htmlFor="row_label">Qator</Label>
+          <Input id="row_label" name="row_label" placeholder="3" className="mt-1.5" />
+        </div>
+        <div>
+          <Label htmlFor="shop_number">Do&rsquo;kon raqami</Label>
+          <Input id="shop_number" name="shop_number" placeholder="23" className="mt-1.5" />
+        </div>
+      </div>
+      <p className="-mt-3 text-xs text-muted-foreground">
+        Malika bozoridagi joylashuvingiz — xaridorlar do&rsquo;koningizni topishi uchun.
+      </p>
+
       {state.error && (
         <p className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert">
           {state.error}

@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { Store, Sparkles } from "lucide-react";
+import { Store, Sparkles, ShieldCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { StoreForm } from "@/components/sell/store-form";
-import { ProductForm } from "@/components/sell/product-form";
+import { ListingTabs } from "@/components/sell/listing-tabs";
 import { BecomeSellerButton } from "@/components/sell/become-seller-button";
+import { ReservationRow } from "@/components/sell/reservation-row";
 import { ProductThumb } from "@/components/marketplace/product-thumb";
 
 export const metadata: Metadata = { title: "Mahsulot qo'shish" };
@@ -18,6 +18,16 @@ export const metadata: Metadata = { title: "Mahsulot qo'shish" };
 function formatPrice(value: number): string {
   return new Intl.NumberFormat("uz-UZ").format(Math.round(value));
 }
+
+const STATUS_LABEL: Record<string, string> = {
+  active: "Faol",
+  draft: "Qoralama",
+  pending: "Kutilmoqda",
+  hidden: "Yashirilgan",
+  out_of_stock: "Tugagan",
+  rejected: "Rad etilgan",
+  archived: "Arxivlangan",
+};
 
 export default async function SellNewPage() {
   const supabase = await createClient();
@@ -43,7 +53,7 @@ export default async function SellNewPage() {
     .eq("owner_id", user.id)
     .maybeSingle();
 
-  const [{ data: categories }, { data: offers }] = await Promise.all([
+  const [{ data: categories }, { data: offers }, { data: usedDevices }, { data: reservations }] = await Promise.all([
     supabase
       .from("categories")
       .select("id, name_uz")
@@ -53,23 +63,43 @@ export default async function SellNewPage() {
     store
       ? supabase
           .from("product_offers")
-          .select("id, slug, seller_product_name, price, old_price, condition, status, catalog_product_id")
+          .select("id, slug, seller_product_name, price, old_price, status, catalog_product_id")
           .eq("store_id", store.id)
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: null }),
+    store
+      ? supabase
+          .from("used_device_units")
+          .select("id, slug, title, price, status, telefy_check_status, battery_health, catalog_product_id")
+          .eq("store_id", store.id)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: null }),
+    store
+      ? supabase
+          .from("reservations")
+          .select("id, status, price_locked, expires_at, customer_comment, product_offer_id, used_device_unit_id, created_at")
+          .eq("store_id", store.id)
+          .in("status", ["pending", "seller_confirmed", "customer_arrived"])
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: null }),
   ]);
 
-  const catalogIds = [...new Set((offers ?? []).map((o) => o.catalog_product_id))];
-  const { data: offerCatalogProducts } = catalogIds.length
-    ? await supabase.from("catalog_products").select("id, category_id").in("id", catalogIds)
-    : { data: [] as { id: string; category_id: string }[] };
-  const offerCategoryIds = [...new Set((offerCatalogProducts ?? []).map((c) => c.category_id))];
-  const { data: offerCategories } = offerCategoryIds.length
-    ? await supabase.from("categories").select("id, slug").in("id", offerCategoryIds)
+  const catalogIds = [
+    ...new Set([...(offers ?? []).map((o) => o.catalog_product_id), ...(usedDevices ?? []).map((d) => d.catalog_product_id)]),
+  ];
+  const { data: catalogProducts } = catalogIds.length
+    ? await supabase.from("catalog_products").select("id, name, category_id").in("id", catalogIds)
+    : { data: [] as { id: string; name: string; category_id: string }[] };
+  const categoryIds = [...new Set((catalogProducts ?? []).map((c) => c.category_id))];
+  const { data: lookupCategories } = categoryIds.length
+    ? await supabase.from("categories").select("id, slug").in("id", categoryIds)
     : { data: [] as { id: string; slug: string }[] };
-  const catalogCategoryById = new Map((offerCatalogProducts ?? []).map((c) => [c.id, c.category_id]));
-  const categorySlugById = new Map((offerCategories ?? []).map((c) => [c.id, c.slug]));
+  const catalogById = new Map((catalogProducts ?? []).map((c) => [c.id, c]));
+  const categorySlugById = new Map((lookupCategories ?? []).map((c) => [c.id, c.slug]));
+
+  const totalListings = (offers?.length ?? 0) + (usedDevices?.length ?? 0);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -129,42 +159,79 @@ export default async function SellNewPage() {
                 </p>
               )}
 
+              {reservations && reservations.length > 0 && (
+                <div>
+                  <h2 className="mb-3 text-sm font-semibold text-foreground">
+                    Band qilishlar ({reservations.length})
+                  </h2>
+                  <div className="flex flex-col gap-2.5">
+                    {reservations.map((r) => (
+                      <ReservationRow key={r.id} reservation={r} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <Card>
                 <CardHeader>
-                  <CardTitle>Yangi mahsulot</CardTitle>
+                  <CardTitle>Yangi e&rsquo;lon</CardTitle>
                   <CardDescription>&ldquo;{store.name}&rdquo; nomidan e&rsquo;lon joylashtiring.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ProductForm categories={categories ?? []} />
+                  <ListingTabs categories={categories ?? []} />
                 </CardContent>
               </Card>
 
-              {offers && offers.length > 0 && (
+              {totalListings > 0 && (
                 <div>
                   <h2 className="mb-3 text-sm font-semibold text-foreground">
-                    Sizning e&rsquo;lonlaringiz ({offers.length})
+                    Sizning e&rsquo;lonlaringiz ({totalListings})
                   </h2>
                   <div className="flex flex-col gap-2.5">
-                    {offers.map((offer) => {
-                      const categoryId = catalogCategoryById.get(offer.catalog_product_id);
-                      const categorySlug = categoryId ? categorySlugById.get(categoryId) : undefined;
+                    {(offers ?? []).map((offer) => {
+                      const categorySlug = categorySlugById.get(catalogById.get(offer.catalog_product_id)?.category_id ?? "");
                       return (
                         <Link
-                          key={offer.id}
+                          key={`offer-${offer.id}`}
                           href={`/product/${offer.slug}`}
                           className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-primary/40"
                         >
                           <ProductThumb categorySlug={categorySlug} seed={offer.slug} className="h-14 w-14 shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {offer.seller_product_name}
-                            </p>
-                            <p className="text-sm font-semibold text-foreground">
-                              {formatPrice(offer.price)} so&rsquo;m
-                            </p>
+                            <p className="truncate text-sm font-medium text-foreground">{offer.seller_product_name}</p>
+                            <p className="text-sm font-semibold text-foreground">{formatPrice(offer.price)} so&rsquo;m</p>
                           </div>
                           <span className="shrink-0 rounded bg-secondary px-2 py-1 text-[11px] font-medium text-secondary-foreground">
-                            {offer.status === "active" ? "Faol" : offer.status}
+                            {STATUS_LABEL[offer.status] ?? offer.status}
+                          </span>
+                        </Link>
+                      );
+                    })}
+                    {(usedDevices ?? []).map((device) => {
+                      const categorySlug = categorySlugById.get(catalogById.get(device.catalog_product_id)?.category_id ?? "");
+                      return (
+                        <Link
+                          key={`used-${device.id}`}
+                          href={`/used/${device.slug}`}
+                          className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:border-primary/40"
+                        >
+                          <ProductThumb categorySlug={categorySlug} seed={device.slug} className="h-14 w-14 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {device.title}
+                              {device.battery_health && (
+                                <span className="ml-1.5 text-xs text-muted-foreground">
+                                  · Batareya {device.battery_health}%
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-sm font-semibold text-foreground">{formatPrice(device.price)} so&rsquo;m</p>
+                          </div>
+                          {device.telefy_check_status === "passed" && (
+                            <ShieldCheck className="h-4 w-4 shrink-0 text-success" />
+                          )}
+                          <span className="shrink-0 rounded bg-secondary px-2 py-1 text-[11px] font-medium text-secondary-foreground">
+                            {STATUS_LABEL[device.status] ?? device.status}
                           </span>
                         </Link>
                       );

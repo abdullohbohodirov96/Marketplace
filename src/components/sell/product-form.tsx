@@ -16,7 +16,6 @@ export function ProductForm({
   categories: { id: string; name_uz: string }[];
 }) {
   const [state, formAction] = useActionState(createProductAction, initialState);
-  const [condition, setCondition] = useState<"new" | "used">("new");
   // Remounting the form on each success clears every field for the next
   // listing — a plain uncontrolled <form> otherwise keeps stale values.
   const [formVersion, setFormVersion] = useState(0);
@@ -25,10 +24,7 @@ export function ProductForm({
   const [handledSuccess, setHandledSuccess] = useState(state.success);
   if (state.success !== handledSuccess) {
     setHandledSuccess(state.success);
-    if (state.success) {
-      setFormVersion((v) => v + 1);
-      setCondition("new");
-    }
+    if (state.success) setFormVersion((v) => v + 1);
   }
 
   return (
@@ -79,6 +75,31 @@ export function ProductForm({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
+            <Label htmlFor="memory">Xotira hajmi (ixtiyoriy)</Label>
+            <Input
+              id="memory"
+              name="memory"
+              placeholder="256GB"
+              className="mt-1.5"
+              invalid={!!state.fieldErrors?.memory}
+            />
+            <FieldError messages={state.fieldErrors?.memory} />
+          </div>
+          <div>
+            <Label htmlFor="color">Rangi (ixtiyoriy)</Label>
+            <Input
+              id="color"
+              name="color"
+              placeholder="Natural Titanium"
+              className="mt-1.5"
+              invalid={!!state.fieldErrors?.color}
+            />
+            <FieldError messages={state.fieldErrors?.color} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
             <Label htmlFor="price">Narxi (so&rsquo;m)</Label>
             <Input
               id="price"
@@ -105,28 +126,6 @@ export function ProductForm({
             />
             <FieldError messages={state.fieldErrors?.old_price} />
           </div>
-        </div>
-
-        <div>
-          <Label>Holati</Label>
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            {(["new", "used"] as const).map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCondition(c)}
-                className={cn(
-                  "rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors min-h-touch",
-                  condition === c
-                    ? "border-primary bg-primary-50 text-primary-700"
-                    : "border-input bg-background text-foreground hover:bg-secondary",
-                )}
-              >
-                {c === "new" ? "Yangi" : "Ishlatilgan"}
-              </button>
-            ))}
-          </div>
-          <input type="hidden" name="condition" value={condition} />
         </div>
 
         <div>

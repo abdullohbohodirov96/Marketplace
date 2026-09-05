@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Store, Phone, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { hydrateOfferCards, type RawOffer } from "@/lib/marketplace/hydrate-offers";
+import { hydrateOfferCards, hydrateUsedDeviceCards, type RawOffer, type RawUsedDevice } from "@/lib/marketplace/hydrate-offers";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -36,15 +36,28 @@ export default async function StoreDetailPage({
 
   if (!store || store.status !== "approved") notFound();
 
-  const { data: rawOffers } = await supabase
-    .from("product_offers")
-    .select("id, slug, seller_product_name, price, old_price, condition, catalog_product_id, store_id")
-    .eq("store_id", store.id)
-    .eq("status", "active")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+  const [{ data: rawOffers }, { data: rawUsedDevices }] = await Promise.all([
+    supabase
+      .from("product_offers")
+      .select("id, slug, seller_product_name, price, old_price, condition, catalog_product_id, store_id")
+      .eq("store_id", store.id)
+      .eq("status", "active")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("used_device_units")
+      .select("id, slug, title, price, battery_health, telefy_check_status, catalog_product_id, store_id")
+      .eq("store_id", store.id)
+      .eq("status", "active")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const products = await hydrateOfferCards(supabase, (rawOffers ?? []) as RawOffer[]);
+  const [newProducts, usedProducts] = await Promise.all([
+    hydrateOfferCards(supabase, (rawOffers ?? []) as RawOffer[]),
+    hydrateUsedDeviceCards(supabase, (rawUsedDevices ?? []) as RawUsedDevice[]),
+  ]);
+  const products = [...newProducts, ...usedProducts];
 
   return (
     <div className="flex min-h-dvh flex-col">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShieldCheck } from "lucide-react";
 import { ProductThumb } from "@/components/marketplace/product-thumb";
 
 export interface ProductCardData {
@@ -9,6 +10,10 @@ export interface ProductCardData {
   condition?: "new" | "used";
   storeName?: string | null;
   categorySlug?: string | null;
+  /** Used device units live at /used/[slug] instead of /product/[slug]. */
+  isUsed?: boolean;
+  batteryHealth?: number | null;
+  telefyCheckPassed?: boolean;
 }
 
 function formatPrice(value: number): string {
@@ -23,7 +28,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
 
   return (
     <Link
-      href={`/product/${product.slug}`}
+      href={`${product.isUsed ? "/used" : "/product"}/${product.slug}`}
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-primary/40"
     >
       <div className="relative p-3 pb-0">
@@ -55,6 +60,12 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           <span className="text-xs text-muted-foreground line-through">
             {formatPrice(product.oldPrice)} so&rsquo;m
           </span>
+        )}
+        {(product.batteryHealth || product.telefyCheckPassed) && (
+          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+            {product.telefyCheckPassed && <ShieldCheck className="h-3 w-3 text-success" />}
+            {product.batteryHealth && <span>Batareya {product.batteryHealth}%</span>}
+          </p>
         )}
         {product.storeName && (
           <p className="mt-1 truncate text-xs text-muted-foreground">{product.storeName}</p>

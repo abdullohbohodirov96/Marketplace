@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PackageSearch } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { hydrateOfferCards, type RawOffer } from "@/lib/marketplace/hydrate-offers";
+import { hydrateOfferCards, hydrateUsedDeviceCards, type RawOffer, type RawUsedDevice } from "@/lib/marketplace/hydrate-offers";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -49,17 +49,30 @@ export default async function CategoryDetailPage({
 
   const catalogIds = (catalogProducts ?? []).map((c) => c.id);
 
-  const { data: rawOffers } = catalogIds.length
-    ? await supabase
-        .from("product_offers")
-        .select("id, slug, seller_product_name, price, old_price, condition, catalog_product_id, store_id")
-        .in("catalog_product_id", catalogIds)
-        .eq("status", "active")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-    : { data: [] as RawOffer[] };
+  const [{ data: rawOffers }, { data: rawUsedDevices }] = catalogIds.length
+    ? await Promise.all([
+        supabase
+          .from("product_offers")
+          .select("id, slug, seller_product_name, price, old_price, condition, catalog_product_id, store_id")
+          .in("catalog_product_id", catalogIds)
+          .eq("status", "active")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("used_device_units")
+          .select("id, slug, title, price, battery_health, telefy_check_status, catalog_product_id, store_id")
+          .in("catalog_product_id", catalogIds)
+          .eq("status", "active")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false }),
+      ])
+    : [{ data: [] as RawOffer[] }, { data: [] as RawUsedDevice[] }];
 
-  const products = await hydrateOfferCards(supabase, rawOffers ?? []);
+  const [newProducts, usedProducts] = await Promise.all([
+    hydrateOfferCards(supabase, rawOffers ?? []),
+    hydrateUsedDeviceCards(supabase, rawUsedDevices ?? []),
+  ]);
+  const products = [...newProducts, ...usedProducts];
 
   return (
     <div className="flex min-h-dvh flex-col">
