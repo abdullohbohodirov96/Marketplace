@@ -279,6 +279,21 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["product_offers"]["Row"]>;
       };
+      product_offer_images: {
+        Row: {
+          id: string;
+          product_offer_id: string;
+          url: string;
+          sort_order: number;
+          is_primary: boolean;
+        };
+        Relationships: [];
+        Insert: Partial<Database["public"]["Tables"]["product_offer_images"]["Row"]> & {
+          product_offer_id: string;
+          url: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["product_offer_images"]["Row"]>;
+      };
       product_variants: {
         Row: {
           id: string;

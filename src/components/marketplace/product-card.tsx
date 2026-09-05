@@ -14,6 +14,7 @@ export interface ProductCardData {
   isUsed?: boolean;
   batteryHealth?: number | null;
   telefyCheckPassed?: boolean;
+  imageUrl?: string | null;
 }
 
 function formatPrice(value: number): string {
@@ -32,11 +33,21 @@ export function ProductCard({ product }: { product: ProductCardData }) {
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-primary/40"
     >
       <div className="relative p-3 pb-0">
-        <ProductThumb
-          categorySlug={product.categorySlug}
-          seed={product.slug}
-          className="aspect-square w-full"
-        />
+        {product.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- seller-uploaded Supabase Storage urls, not a fixed local/remote set next/image can optimize
+          <img
+            src={product.imageUrl}
+            alt={product.title}
+            loading="lazy"
+            className="aspect-square w-full rounded-lg border border-border object-cover"
+          />
+        ) : (
+          <ProductThumb
+            categorySlug={product.categorySlug}
+            seed={product.slug}
+            className="aspect-square w-full"
+          />
+        )}
         {discountPct !== null && (
           <span className="absolute left-4 top-4 rounded bg-success px-1.5 py-0.5 text-[11px] font-semibold text-success-foreground">
             -{discountPct}%

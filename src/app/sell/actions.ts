@@ -110,6 +110,61 @@ const LOGO_EXT_BY_TYPE: Record<string, string> = {
   "image/webp": "webp",
 };
 
+const LISTING_IMAGE_MAX_BYTES = 8 * 1024 * 1024; // matches the product-images bucket's own file_size_limit
+const LISTING_IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const LISTING_IMAGE_EXT_BY_TYPE: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+const MAX_LISTING_IMAGES = 5;
+
+/**
+ * Uploads every file under formData's "images" field into the
+ * already-provisioned 'product-images' bucket (0020_storage_buckets.sql —
+ * public read, is_store_member(store_id)-gated write, keyed by first path
+ * segment = store_id), grouped under the listing's own id so a seller's
+ * photos for different listings never collide. Optional: an empty file
+ * list is not an error, since a listing can be created without photos.
+ */
+async function uploadListingImages(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  formData: FormData,
+  storeId: string,
+  listingId: string,
+): Promise<{ urls: string[] } | { error: string }> {
+  const files = formData.getAll("images").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) return { urls: [] };
+  if (files.length > MAX_LISTING_IMAGES) {
+    return { error: `Ko'pi bilan ${MAX_LISTING_IMAGES} ta rasm yuklash mumkin` };
+  }
+
+  const urls: string[] = [];
+  for (const file of files) {
+    if (!LISTING_IMAGE_ALLOWED_TYPES.includes(file.type)) {
+      return { error: "Faqat JPG, PNG yoki WEBP formatidagi rasm yuklang" };
+    }
+    if (file.size > LISTING_IMAGE_MAX_BYTES) {
+      return { error: "Har bir rasm hajmi 8MB dan oshmasligi kerak" };
+    }
+
+    const ext = LISTING_IMAGE_EXT_BY_TYPE[file.type] ?? "jpg";
+    const path = `${storeId}/${listingId}/img-${urls.length}-${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("product-images").upload(path, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+    if (uploadError) return { error: uploadError.message };
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("product-images").getPublicUrl(path);
+    urls.push(publicUrl);
+  }
+
+  return { urls };
+}
+
 /**
  * Uploads the seller's own store logo into the already-provisioned
  * 'store-branding' storage bucket (0020_storage_buckets.sql — public read,
@@ -312,23 +367,45 @@ export async function createProductAction(
   });
   if ("error" in variantResult) return { error: variantResult.error };
 
-  const { error: offerError } = await supabase.from("product_offers").insert({
-    catalog_product_id: catalogResult.id,
-    variant_id: variantResult.id,
-    store_id: store.id,
-    seller_product_name: title,
-    slug: uniqueSlug(title),
-    price,
-    old_price: oldPrice,
-    condition: "new",
-    color: color || null,
-    memory: memory || null,
-    description: description || null,
-    status: "active",
-    published_at: new Date().toISOString(),
-  });
+  const { data: createdOffer, error: offerError } = await supabase
+    .from("product_offers")
+    .insert({
+      catalog_product_id: catalogResult.id,
+      variant_id: variantResult.id,
+      store_id: store.id,
+      seller_product_name: title,
+      slug: uniqueSlug(title),
+      price,
+      old_price: oldPrice,
+      condition: "new",
+      color: color || null,
+      memory: memory || null,
+      description: description || null,
+      status: "active",
+      published_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
 
-  if (offerError) return { error: offerError.message };
+  if (offerError || !createdOffer) return { error: offerError?.message ?? "E'lon yaratishda xatolik" };
+
+  // Photos are uploaded after the offer exists so they can be grouped under
+  // its own id — a failure here (bad file, storage hiccup) is reported back
+  // to the seller, but the offer itself is already live; they can add
+  // photos later from their listing (image editing is a future increment).
+  const imagesResult = await uploadListingImages(supabase, formData, store.id, createdOffer.id);
+  if ("error" in imagesResult) return { error: imagesResult.error };
+  if (imagesResult.urls.length > 0) {
+    const { error: imagesError } = await supabase.from("product_offer_images").insert(
+      imagesResult.urls.map((url, i) => ({
+        product_offer_id: createdOffer.id,
+        url,
+        sort_order: i,
+        is_primary: i === 0,
+      })),
+    );
+    if (imagesError) return { error: imagesError.message };
+  }
 
   revalidatePath("/sell/new");
   revalidatePath("/categories");
@@ -408,39 +485,58 @@ export async function createUsedDeviceAction(
   const imeiHash = imeiRaw ? hashImei(imeiRaw) : null;
   const imeiLastFour = imeiRaw ? imeiLastDigits(imeiRaw) : null;
 
-  const { error: deviceError } = await supabase.from("used_device_units").insert({
-    catalog_product_id: catalogResult.id,
-    variant_id: variantResult.id,
-    store_id: store.id,
-    slug: uniqueSlug(title),
-    title,
-    price,
-    battery_health: batteryHealth,
-    screen_condition: screenCondition,
-    condition_grade: conditionGrade,
-    warranty_days: warrantyDaysRaw ? Number(warrantyDaysRaw) : 0,
-    imei_hash: imeiHash,
-    imei_last_digits: imeiLastFour,
-    // Self-reported by the seller, never platform-verified — the UI must
-    // never present this as an authoritative/checked fact (that's what
-    // telefy_check_status is for, and it's admin/moderator-only).
-    imei_registered: false,
-    was_repaired: wasRepaired,
-    box_available: boxAvailable,
-    charger_available: chargerAvailable,
-    description: description || null,
-    status: "active",
-    published_at: new Date().toISOString(),
-  });
+  const { data: createdDevice, error: deviceError } = await supabase
+    .from("used_device_units")
+    .insert({
+      catalog_product_id: catalogResult.id,
+      variant_id: variantResult.id,
+      store_id: store.id,
+      slug: uniqueSlug(title),
+      title,
+      price,
+      battery_health: batteryHealth,
+      screen_condition: screenCondition,
+      condition_grade: conditionGrade,
+      warranty_days: warrantyDaysRaw ? Number(warrantyDaysRaw) : 0,
+      imei_hash: imeiHash,
+      imei_last_digits: imeiLastFour,
+      // Self-reported by the seller, never platform-verified — the UI must
+      // never present this as an authoritative/checked fact (that's what
+      // telefy_check_status is for, and it's admin/moderator-only).
+      imei_registered: false,
+      was_repaired: wasRepaired,
+      box_available: boxAvailable,
+      charger_available: chargerAvailable,
+      description: description || null,
+      status: "active",
+      published_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
 
-  if (deviceError) {
-    if (deviceError.code === "23505" && deviceError.message.includes("imei_hash")) {
+  if (deviceError || !createdDevice) {
+    if (deviceError?.code === "23505" && deviceError.message.includes("imei_hash")) {
       return {
         error: "Bu IMEI raqamli telefon marketplace'da allaqachon ro'yxatga olingan",
         fieldErrors: { imei: ["Bu telefon allaqachon ro'yxatga olingan"] },
       };
     }
-    return { error: deviceError.message };
+    return { error: deviceError?.message ?? "E'lon yaratishda xatolik" };
+  }
+
+  // Same optional-photos flow as createProductAction, just persisted onto
+  // the plain used_device_units.images text[] column instead of a join
+  // table (this table never needed a per-image is_primary/sort_order row
+  // since a used unit is a single physical device, not a seller offer that
+  // multiple variants could share).
+  const imagesResult = await uploadListingImages(supabase, formData, store.id, createdDevice.id);
+  if ("error" in imagesResult) return { error: imagesResult.error };
+  if (imagesResult.urls.length > 0) {
+    const { error: imagesError } = await supabase
+      .from("used_device_units")
+      .update({ images: imagesResult.urls })
+      .eq("id", createdDevice.id);
+    if (imagesError) return { error: imagesError.message };
   }
 
   revalidatePath("/sell/new");

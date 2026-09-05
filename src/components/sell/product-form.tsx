@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
+import { ListingImageInput } from "@/components/sell/listing-image-input";
 import { cn } from "@/lib/utils/cn";
 
 const initialState: SellActionState = {};
@@ -138,6 +139,8 @@ export function ProductForm({
             className="mt-1.5 w-full rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
+
+        <ListingImageInput id="images" error={state.fieldErrors?.images} />
 
         {state.error && (
           <p className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert">

@@ -58,7 +58,7 @@ export default async function StoreDetailPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("used_device_units")
-      .select("id, slug, title, price, battery_health, telefy_check_status, catalog_product_id, store_id")
+      .select("id, slug, title, price, battery_health, telefy_check_status, catalog_product_id, store_id, images")
       .eq("store_id", store.id)
       .eq("status", "active")
       .is("deleted_at", null)

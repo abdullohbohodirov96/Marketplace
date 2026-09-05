@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
+import { ListingImageInput } from "@/components/sell/listing-image-input";
 import { cn } from "@/lib/utils/cn";
 import type { DeviceConditionGrade } from "@/types/database.types";
 
@@ -272,6 +273,8 @@ export function UsedDeviceForm({
           Telefy Check (mustaqil tekshiruv) belgisi bu yerdan qo&rsquo;yilmaydi — uni faqat
           moderator/admin tasdiqlaydi.
         </p>
+
+        <ListingImageInput id="used-images" error={state.fieldErrors?.images} />
 
         {state.error && (
           <p className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert">

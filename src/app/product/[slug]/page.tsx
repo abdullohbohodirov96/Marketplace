@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Phone, Store, ShieldCheck, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { ProductThumb } from "@/components/marketplace/product-thumb";
+import { ProductGallery } from "@/components/marketplace/product-gallery";
 import { ReserveButton } from "@/components/marketplace/reserve-button";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -28,7 +28,7 @@ async function getOfferBySlug(slug: string) {
 
   if (!offer) return null;
 
-  const [{ data: catalogProduct }, { data: store }, { data: otherOffersRaw }] = await Promise.all([
+  const [{ data: catalogProduct }, { data: store }, { data: otherOffersRaw }, { data: images }] = await Promise.all([
     supabase.from("catalog_products").select("name, category_id").eq("id", offer.catalog_product_id).maybeSingle(),
     supabase
       .from("stores")
@@ -44,6 +44,11 @@ async function getOfferBySlug(slug: string) {
       .neq("id", offer.id)
       .order("price", { ascending: true })
       .limit(5),
+    supabase
+      .from("product_offer_images")
+      .select("url, is_primary, sort_order")
+      .eq("product_offer_id", offer.id)
+      .order("sort_order", { ascending: true }),
   ]);
 
   const { data: category } = catalogProduct
@@ -59,7 +64,12 @@ async function getOfferBySlug(slug: string) {
     .filter((o) => otherStoreNameById.has(o.store_id))
     .map((o) => ({ ...o, storeName: otherStoreNameById.get(o.store_id)! }));
 
-  return { offer, catalogProduct, store, category, otherOffers };
+  // Primary image (if any) first, then the rest in sort_order — mirrors the
+  // same "is_primary wins" rule hydrateOfferCards uses for feed thumbnails.
+  const sortedImages = [...(images ?? [])].sort((a, b) => Number(b.is_primary) - Number(a.is_primary));
+  const imageUrls = sortedImages.map((img) => img.url);
+
+  return { offer, catalogProduct, store, category, otherOffers, imageUrls };
 }
 
 export async function generateMetadata({
@@ -86,7 +96,7 @@ export default async function ProductDetailPage({
     notFound();
   }
 
-  const { offer, catalogProduct, store, category, otherOffers } = result;
+  const { offer, catalogProduct, store, category, otherOffers, imageUrls } = result;
   const title = offer.seller_product_name || catalogProduct?.name || "Mahsulot";
   const hasDiscount = !!offer.old_price && offer.old_price > offer.price;
 
@@ -96,7 +106,13 @@ export default async function ProductDetailPage({
       <main className="flex-1 pb-24 lg:pb-0">
         <div className="container max-w-3xl py-8 sm:py-12">
           <div className="grid gap-8 sm:grid-cols-2">
-            <ProductThumb categorySlug={category?.slug} seed={offer.slug} className="aspect-square w-full" />
+            <ProductGallery
+              images={imageUrls}
+              categorySlug={category?.slug}
+              seed={offer.slug}
+              title={title}
+              className="aspect-square w-full"
+            />
 
             <div className="flex flex-col gap-4">
               {category && (

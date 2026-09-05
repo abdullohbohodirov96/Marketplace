@@ -21,6 +21,31 @@ function formatPrice(value: number): string {
   return new Intl.NumberFormat("uz-UZ").format(Math.round(value));
 }
 
+/**
+ * The "Kategoriya" picker in the listing form needs both top-level
+ * categories (Telefonlar, Noutbuklar, ...) and their brand subcategories
+ * (iPhone, Samsung, ... under Telefonlar — see 0030_seed_phone_brand_
+ * categories.sql), in a stable parent-then-children order with children
+ * visually indented so a plain <select> still reads as a tree.
+ */
+function flattenCategoryTree(
+  categories: { id: string; name_uz: string; parent_id: string | null }[],
+): { id: string; name_uz: string }[] {
+  const children = new Map<string, typeof categories>();
+  for (const c of categories) {
+    if (c.parent_id) children.set(c.parent_id, [...(children.get(c.parent_id) ?? []), c]);
+  }
+
+  const result: { id: string; name_uz: string }[] = [];
+  for (const top of categories.filter((c) => !c.parent_id)) {
+    result.push({ id: top.id, name_uz: top.name_uz });
+    for (const child of children.get(top.id) ?? []) {
+      result.push({ id: child.id, name_uz: `— ${child.name_uz}` });
+    }
+  }
+  return result;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   active: "Faol",
   draft: "Qoralama",
@@ -70,9 +95,8 @@ export default async function SellNewPage() {
   const [{ data: categories }, { data: offers }, { data: usedDevices }, { data: reservations }, totalViews, viewsToday] = await Promise.all([
     supabase
       .from("categories")
-      .select("id, name_uz")
+      .select("id, name_uz, parent_id")
       .eq("is_active", true)
-      .is("parent_id", null)
       .order("sort_order", { ascending: true }),
     store
       ? supabase
@@ -122,6 +146,7 @@ export default async function SellNewPage() {
     : { data: [] as { id: string; slug: string }[] };
   const catalogById = new Map((catalogProducts ?? []).map((c) => [c.id, c]));
   const categorySlugById = new Map((lookupCategories ?? []).map((c) => [c.id, c.slug]));
+  const categoryOptions = flattenCategoryTree(categories ?? []);
 
   const totalListings = (offers?.length ?? 0) + (usedDevices?.length ?? 0);
 
@@ -227,7 +252,7 @@ export default async function SellNewPage() {
                   <CardDescription>&ldquo;{store.name}&rdquo; nomidan e&rsquo;lon joylashtiring.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ListingTabs categories={categories ?? []} />
+                  <ListingTabs categories={categoryOptions} />
                 </CardContent>
               </Card>
 

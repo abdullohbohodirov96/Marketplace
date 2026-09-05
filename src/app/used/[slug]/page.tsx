@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Phone, Store, ShieldCheck, BadgeCheck, BatteryMedium, Package, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { ProductThumb } from "@/components/marketplace/product-thumb";
+import { ProductGallery } from "@/components/marketplace/product-gallery";
 import { ReserveButton } from "@/components/marketplace/reserve-button";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -35,7 +35,7 @@ async function getDeviceBySlug(slug: string) {
   const { data: device } = await supabase
     .from("used_device_units")
     .select(
-      "id, slug, title, price, battery_health, battery_replaced, screen_condition, condition_grade, was_repaired, box_available, charger_available, warranty_days, telefy_check_status, telefy_check_notes, description, catalog_product_id, store_id, status",
+      "id, slug, title, price, battery_health, battery_replaced, screen_condition, condition_grade, was_repaired, box_available, charger_available, warranty_days, telefy_check_status, telefy_check_notes, description, catalog_product_id, store_id, status, images",
     )
     .eq("slug", slug)
     .is("deleted_at", null)
@@ -92,7 +92,13 @@ export default async function UsedDeviceDetailPage({
       <main className="flex-1 pb-24 lg:pb-0">
         <div className="container max-w-3xl py-8 sm:py-12">
           <div className="grid gap-8 sm:grid-cols-2">
-            <ProductThumb categorySlug={category?.slug} seed={device.slug} className="aspect-square w-full" />
+            <ProductGallery
+              images={device.images ?? []}
+              categorySlug={category?.slug}
+              seed={device.slug}
+              title={title}
+              className="aspect-square w-full"
+            />
 
             <div className="flex flex-col gap-4">
               {category && (

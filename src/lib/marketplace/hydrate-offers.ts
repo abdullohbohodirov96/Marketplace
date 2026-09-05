@@ -24,6 +24,7 @@ export interface RawUsedDevice {
   telefy_check_status: string;
   catalog_product_id: string;
   store_id: string;
+  images?: string[] | null;
 }
 
 interface CatalogLookup {
@@ -64,14 +65,45 @@ async function buildCatalogLookup(
   };
 }
 
+/**
+ * One primary/first image url per offer id — product_offer_images is a
+ * separate table (a seller can upload several photos), so a listing feed
+ * only needs the lead image, not the full gallery (that's fetched directly
+ * by the product detail page instead).
+ */
+async function buildOfferImageLookup(supabase: Supabase, offerIds: string[]): Promise<Map<string, string>> {
+  if (offerIds.length === 0) return new Map();
+  const { data: images } = await supabase
+    .from("product_offer_images")
+    .select("product_offer_id, url, is_primary, sort_order")
+    .in("product_offer_id", offerIds)
+    .order("sort_order", { ascending: true });
+
+  const byOffer = new Map<string, string>();
+  for (const img of images ?? []) {
+    // is_primary wins outright; otherwise the first row by sort_order (the
+    // query above is already ordered, so "first seen" is correct).
+    if (img.is_primary || !byOffer.has(img.product_offer_id)) {
+      byOffer.set(img.product_offer_id, img.url);
+    }
+  }
+  return byOffer;
+}
+
 export async function hydrateOfferCards(supabase: Supabase, offers: RawOffer[]): Promise<ProductCardData[]> {
   if (offers.length === 0) return [];
 
-  const { catalogById, categorySlugById, storeById } = await buildCatalogLookup(
-    supabase,
-    [...new Set(offers.map((o) => o.catalog_product_id))],
-    [...new Set(offers.map((o) => o.store_id))],
-  );
+  const [{ catalogById, categorySlugById, storeById }, imageByOffer] = await Promise.all([
+    buildCatalogLookup(
+      supabase,
+      [...new Set(offers.map((o) => o.catalog_product_id))],
+      [...new Set(offers.map((o) => o.store_id))],
+    ),
+    buildOfferImageLookup(
+      supabase,
+      offers.map((o) => o.id),
+    ),
+  ]);
 
   return offers.map((offer) => {
     const catalogProduct = catalogById.get(offer.catalog_product_id);
@@ -84,6 +116,7 @@ export async function hydrateOfferCards(supabase: Supabase, offers: RawOffer[]):
       condition: offer.condition === "used" ? "used" : "new",
       storeName: storeById.get(offer.store_id)?.name ?? null,
       categorySlug: categorySlug ?? null,
+      imageUrl: imageByOffer.get(offer.id) ?? null,
     };
   });
 }
@@ -114,6 +147,7 @@ export async function hydrateUsedDeviceCards(
       isUsed: true,
       batteryHealth: device.battery_health,
       telefyCheckPassed: device.telefy_check_status === "passed" || device.telefy_check_status === "passed_with_notes",
+      imageUrl: device.images?.[0] ?? null,
     };
   });
 }
