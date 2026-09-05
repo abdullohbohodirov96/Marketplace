@@ -5,6 +5,9 @@ import type { Database } from "@/types/database.types";
 const SELLER_PREFIX = "/seller";
 const ADMIN_PREFIX = "/admin";
 const CUSTOMER_ONLY_PREFIX = "/account";
+// Any signed-in user (customer or seller) can open /sell/new — that page is
+// also where a plain customer becomes a seller, so it isn't role-gated here.
+const SELL_PREFIX = "/sell";
 const AUTH_PREFIXES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 /**
@@ -49,7 +52,8 @@ export async function updateSession(request: NextRequest) {
   const needsAuth =
     pathname.startsWith(SELLER_PREFIX) ||
     pathname.startsWith(ADMIN_PREFIX) ||
-    pathname.startsWith(CUSTOMER_ONLY_PREFIX);
+    pathname.startsWith(CUSTOMER_ONLY_PREFIX) ||
+    pathname.startsWith(SELL_PREFIX);
 
   if (needsAuth && !user) {
     const redirectUrl = new URL("/login", request.url);
