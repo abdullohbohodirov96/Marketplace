@@ -73,11 +73,23 @@ export async function createReservationAction(input: {
     used_device_unit_id: input.deviceId ?? null,
     price_locked: price,
     customer_comment: input.comment?.trim() || null,
+    // Purely advisory — reservations_validate_target (0029) always
+    // overwrites this to "now + 4h" server-side for a non-privileged
+    // insert, so a tampered value sent here has no effect.
     expires_at: expiresAt,
     status: "pending",
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    // reservations_one_active_per_device_idx (0029) — someone else's hold
+    // on this exact used phone is still active. Race-safe: Postgres's
+    // unique index (not an app-level lock) is what actually prevents two
+    // buyers from reserving the same physical unit at once.
+    if (error.code === "23505" && error.message.includes("reservations_one_active_per_device_idx")) {
+      return { error: "Bu telefonni hozir boshqa xaridor band qilib turibdi. Birozdan keyin qayta urinib ko'ring." };
+    }
+    return { error: error.message };
+  }
 
   if (input.offerId) revalidatePath(`/product/${input.offerId}`);
   revalidatePath("/sell/new");
@@ -94,9 +106,14 @@ const SELLER_TRANSITIONS: Record<string, ReservationStatus> = {
 
 /**
  * Seller-side reservation state transitions. RLS (reservations_update)
- * already restricts this to the store's own members or an admin — this
- * just maps a short action name to the enum value and stamps the matching
- * timestamp column.
+ * restricts this to the store's own members or an admin, and
+ * guard_reservation_transitions (0029_reservation_state_machine_and_
+ * locking.sql) enforces the actual state machine (pending ->
+ * seller_confirmed/rejected/cancelled -> customer_arrived -> purchased,
+ * no skipping stages, nothing revivable once terminal) and stamps
+ * confirmed_at/purchased_at/cancelled_at itself — this action only sends
+ * the target status, never a timestamp, since a client-supplied timestamp
+ * is silently ignored by the trigger anyway.
  */
 export async function updateReservationStatusAction(
   reservationId: string,
@@ -106,18 +123,13 @@ export async function updateReservationStatusAction(
   const status = SELLER_TRANSITIONS[action];
   if (!status) return { error: "Noma'lum amal" };
 
-  const now = new Date().toISOString();
-  const update =
-    status === "seller_confirmed"
-      ? { status, confirmed_at: now }
-      : status === "purchased"
-        ? { status, purchased_at: now }
-        : status === "cancelled" || status === "rejected"
-          ? { status, cancelled_at: now }
-          : { status };
-
-  const { error } = await supabase.from("reservations").update(update).eq("id", reservationId);
-  if (error) return { error: error.message };
+  const { error } = await supabase.from("reservations").update({ status }).eq("id", reservationId);
+  if (error) {
+    if (error.message.includes("bu status o'tishi ruxsat etilmagan")) {
+      return { error: "Bu holatdan bunday o'tish mumkin emas — sahifani yangilab qayta ko'ring." };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath("/sell/new");
   return { success: true };

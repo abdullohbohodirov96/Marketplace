@@ -120,25 +120,36 @@ bo'lishi kerak.
    o'zgartirish shart emas.
 5. Deploy tugmasini bosing.
 
-## 6. Cron sozlash yo'riqnomasi (Stage 7+)
+## 6. Cron sozlash yo'riqnomasi
 
-Bildirishnoma cron endpointlari (`src/app/api/cron/*`, keyingi bosqichda
-qo'shiladi) `CRON_SECRET` bilan himoyalanadi — har bir so'rov
-`Authorization: Bearer <CRON_SECRET>` headerini talab qiladi.
+Cron endpointlari (`src/app/api/cron/*`) `CRON_SECRET` bilan himoyalanadi —
+har bir so'rov `Authorization: Bearer <CRON_SECRET>` headerini talab qiladi.
 
-`vercel.json`ga misol (Stage 7 da qo'shiladi):
+**Hozir mavjud:**
+
+- `GET /api/cron/expire-reservations` — muddati o'tgan (`expires_at` dan
+  keyingi) `pending`/`seller_confirmed` band qilishlarni `expired`ga
+  o'tkazadi (`expire_stale_reservations()` DB funksiyasi orqali — 0029-
+  migration). Bir necha daqiqada bir marta chaqirilishi kerak (masalan, har
+  5-15 daqiqada) — aks holda muddati o'tgan band qilishlar `pending` bo'lib
+  qolaveradi va `reservations_one_active_per_device_idx` ularni "faol" deb
+  hisoblab, o'sha telefonni qayta band qilishga to'sqinlik qiladi.
+
+Render'da: **Cron Jobs** bo'limidan yangi job qo'shing —
+`curl -H "Authorization: Bearer $CRON_SECRET" https://<sizning-domen>/api/cron/expire-reservations`,
+schedule masalan `*/10 * * * *`. Vercel'ga o'tsangiz, `vercel.json`:
 
 ```json
 {
   "crons": [
-    { "path": "/api/cron/notifications", "schedule": "0 */6 * * *" },
-    { "path": "/api/cron/offer-staleness", "schedule": "0 3 * * *" }
+    { "path": "/api/cron/expire-reservations", "schedule": "*/10 * * * *" }
   ]
 }
 ```
 
 Vercel Cron so'rovlariga `CRON_SECRET`ni avtomatik qo'shadi (Project
-Settings → Cron Jobs), qo'lda sozlash shart emas.
+Settings → Cron Jobs); Render'da buni qo'lda `curl` buyrug'iga yozasiz
+(yuqorida ko'rsatilganidek).
 
 ## 7. Arxitektura
 
@@ -250,7 +261,35 @@ funksiyasi; har doim serverda tekshiring, clientga ishonmang.
   npm paketi bilan himoyalangan — clientga tasodifan import qilinsa build
   xato beradi).
 
-## 9. Test natijalari (Stage 1)
+## 9. Avtomatlashtirilgan testlar
+
+`npm test` (Vitest) — hozircha `reservations` xavfsizlik invariantlari
+uchun (`tests/db/reservations.security.test.ts`): band qilishni
+soxtalashtirish (to'g'ridan-to'g'ri `status='purchased'` bilan INSERT),
+narx/nishon mos kelmasligi, bitta ishlatilgan telefonni ikki kishi bir
+vaqtda band qilishi, sotuvchining status-machine'ni sakrab o'tishi yoki
+narx/xaridorni o'zgartirishi, xaridorning o'z holatini o'zgartirishi,
+begona foydalanuvchi aralashuvi, va `expire_stale_reservations()`ning
+ruxsatlari — hammasi haqiqiy Postgres'ga ulanib, real trigger/constraint'lar
+ustida tekshiriladi (Supabase client emas, to'g'ridan-to'g'ri `pg`).
+
+Ishga tushirish uchun **bir martalik, tashlab yuboriladigan** test bazasi
+kerak (production bazangizga hech qachon ulamang):
+
+```bash
+sudo -u postgres psql -c "drop database if exists telefy_test;" -c "create database telefy_test;"
+sudo -u postgres psql -d telefy_test -f scripts/local-supabase-shim.sql
+for f in supabase/migrations/*.sql; do
+  sudo -u postgres psql -d telefy_test -v ON_ERROR_STOP=1 -f "$f" || break
+done
+DATABASE_URL="postgresql://postgres:<parol>@localhost:5432/telefy_test" npm test
+```
+
+`DATABASE_URL` sozlanmagan bo'lsa, testlar xato bermaydi — shunchaki
+o'tkazib yuboriladi (skip) va buni aniq ogohlantiradi, shu sababli bu
+`npm run build`/deploy jarayonini bloklamaydi.
+
+## 10. Test natijalari (Stage 1)
 
 | Tekshiruv | Natija |
 | --- | --- |
@@ -277,7 +316,7 @@ qolishiga** olib kelardi. Mahalliy Postgres'da sinovdan o'tkazish paytida
 aniqlanib, darhol tuzatildi (endi `auth.uid()` ishlatiladi, mavjud bo'lmasa
 `null`).
 
-## 10. Checklist — nima tayyor
+## 11. Checklist — nima tayyor
 
 - [x] Repository arxitekturasi (Next.js 16, TS strict, Tailwind, App Router)
 - [x] To'liq database sxemasi — asl va kengaytirilgan spetsifikatsiyaning
@@ -295,7 +334,7 @@ aniqlanib, darhol tuzatildi (endi `auth.uid()` ishlatiladi, mavjud bo'lmasa
 - [x] PWA manifest skeleti (ikonalar to'liq to'plami Stage 9da)
 - [x] .env.example, README, Supabase/Vercel/Cron yo'riqnomalari
 
-## 11. Roadmap — keyingi bosqichlar
+## 12. Roadmap — keyingi bosqichlar
 
 | Bosqich | Mazmuni |
 | --- | --- |

@@ -490,6 +490,7 @@ export interface Database {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_moderator_or_admin: { Args: Record<string, never>; Returns: boolean };
       current_role: { Args: Record<string, never>; Returns: UserRole };
+      expire_stale_reservations: { Args: Record<string, never>; Returns: number };
     };
     Enums: {
       user_role: UserRole;

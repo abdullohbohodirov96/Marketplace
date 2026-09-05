@@ -296,7 +296,7 @@ export async function createUsedDeviceAction(
     fieldErrors.condition_grade = ["Umumiy holatni tanlang"];
   }
   if (imeiRaw && !isValidImei(imeiRaw)) {
-    fieldErrors.imei = ["IMEI 14-16 ta raqamdan iborat bo'lishi kerak (odatda 15 ta)"];
+    fieldErrors.imei = ["IMEI 15 ta raqamdan iborat bo'lishi va to'g'ri bo'lishi kerak — qurilmangizning Sozlamalar > Bu qurilma haqida bo'limidan tekshiring"];
   }
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
