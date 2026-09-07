@@ -165,6 +165,27 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["store_locations"]["Row"]>;
       };
+      store_verifications: {
+        Row: {
+          id: string;
+          store_id: string;
+          verification_type: string;
+          status: ModerationStatus;
+          submitted_data: Record<string, unknown>;
+          submitted_files: string[];
+          reviewed_by: string | null;
+          rejection_reason: string | null;
+          verified_at: string | null;
+          expires_at: string | null;
+          created_at: string;
+        };
+        Relationships: [];
+        Insert: Partial<Database["public"]["Tables"]["store_verifications"]["Row"]> & {
+          store_id: string;
+          verification_type: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["store_verifications"]["Row"]>;
+      };
       markets: {
         Row: {
           id: string;
@@ -293,6 +314,29 @@ export interface Database {
           url: string;
         };
         Update: Partial<Database["public"]["Tables"]["product_offer_images"]["Row"]>;
+      };
+      reviews: {
+        Row: {
+          id: string;
+          user_id: string;
+          product_offer_id: string | null;
+          store_id: string | null;
+          rating: number;
+          comment: string | null;
+          images: string[];
+          status: ModerationStatus;
+          helpful_count: number;
+          verified_purchase: boolean;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Relationships: [];
+        Insert: Partial<Database["public"]["Tables"]["reviews"]["Row"]> & {
+          user_id: string;
+          rating: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["reviews"]["Row"]>;
       };
       product_variants: {
         Row: {
@@ -442,6 +486,20 @@ export interface Database {
           product_offer_id: string;
         };
         Update: Partial<Database["public"]["Tables"]["favorites"]["Row"]>;
+      };
+      saved_stores: {
+        Row: {
+          id: string;
+          user_id: string;
+          store_id: string;
+          created_at: string;
+        };
+        Relationships: [];
+        Insert: Partial<Database["public"]["Tables"]["saved_stores"]["Row"]> & {
+          user_id: string;
+          store_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["saved_stores"]["Row"]>;
       };
       analytics_events: {
         Row: {

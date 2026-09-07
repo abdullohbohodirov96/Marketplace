@@ -8,6 +8,9 @@ const CUSTOMER_ONLY_PREFIX = "/account";
 // Any signed-in user (customer or seller) can open /sell/new — that page is
 // also where a plain customer becomes a seller, so it isn't role-gated here.
 const SELL_PREFIX = "/sell";
+// Personal, signed-in-only pages open to any active account (not just
+// sellers/admins) — same treatment as /account.
+const PERSONAL_PREFIXES = ["/favorites", "/notifications"];
 const AUTH_PREFIXES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 /**
@@ -53,7 +56,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith(SELLER_PREFIX) ||
     pathname.startsWith(ADMIN_PREFIX) ||
     pathname.startsWith(CUSTOMER_ONLY_PREFIX) ||
-    pathname.startsWith(SELL_PREFIX);
+    pathname.startsWith(SELL_PREFIX) ||
+    PERSONAL_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (needsAuth && !user) {
     const redirectUrl = new URL("/login", request.url);
@@ -61,26 +65,32 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && (pathname.startsWith(SELLER_PREFIX) || pathname.startsWith(ADMIN_PREFIX))) {
+  if (
+    user &&
+    (pathname.startsWith(SELLER_PREFIX) ||
+      pathname.startsWith(ADMIN_PREFIX) ||
+      pathname.startsWith(SELL_PREFIX) ||
+      pathname.startsWith(CUSTOMER_ONLY_PREFIX) ||
+      PERSONAL_PREFIXES.some((p) => pathname.startsWith(p)))
+  ) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role, status")
       .eq("id", user.id)
       .single();
 
-    if (profile?.status !== "active") {
+    if (pathname !== "/account/blocked" && profile?.status !== "active") {
       return NextResponse.redirect(new URL("/account/blocked", request.url));
     }
 
-    if (pathname.startsWith(ADMIN_PREFIX) && !["admin", "moderator"].includes(profile.role)) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
+    if (profile) {
+      if (pathname.startsWith(ADMIN_PREFIX) && !["admin", "moderator"].includes(profile.role)) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
 
-    if (
-      pathname.startsWith(SELLER_PREFIX) &&
-      !["seller", "admin"].includes(profile.role)
-    ) {
-      return NextResponse.redirect(new URL("/", request.url));
+      if (pathname.startsWith(SELLER_PREFIX) && !["seller", "admin"].includes(profile.role)) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
     }
   }
 

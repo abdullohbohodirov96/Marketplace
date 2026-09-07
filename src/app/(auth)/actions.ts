@@ -36,7 +36,7 @@ export async function registerAction(
   formData: FormData,
 ): Promise<ActionState> {
   const ip = await clientIp();
-  const rl = checkRateLimit(`register:${ip}`, RATE_LIMITS.register);
+  const rl = await checkRateLimit(`register:${ip}`, RATE_LIMITS.register);
   if (!rl.success) {
     return { error: "Juda ko'p urinish. Birozdan keyin qayta urinib ko'ring." };
   }
@@ -96,7 +96,7 @@ export async function loginAction(
 ): Promise<ActionState> {
   const ip = await clientIp();
   const identifierRaw = String(formData.get("identifier") ?? "");
-  const rl = checkRateLimit(`login:${ip}:${identifierRaw}`, RATE_LIMITS.login);
+  const rl = await checkRateLimit(`login:${ip}:${identifierRaw}`, RATE_LIMITS.login);
   if (!rl.success) {
     return { error: "Juda ko'p noto'g'ri urinish. Birozdan so'ng qayta urinib ko'ring." };
   }
@@ -154,7 +154,7 @@ export async function forgotPasswordAction(
   formData: FormData,
 ): Promise<ActionState & { phone?: string }> {
   const ip = await clientIp();
-  const rl = checkRateLimit(`pwreset:${ip}`, RATE_LIMITS.passwordReset);
+  const rl = await checkRateLimit(`pwreset:${ip}`, RATE_LIMITS.passwordReset);
   if (!rl.success) {
     return { error: "Juda ko'p urinish. Birozdan keyin qayta urinib ko'ring." };
   }

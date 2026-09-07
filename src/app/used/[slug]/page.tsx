@@ -66,8 +66,31 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const result = await getDeviceBySlug(slug);
-  const title = result?.device.title || result?.catalogProduct?.name || "Ishlatilgan telefon";
-  return { title };
+  if (!result) return { title: "Ishlatilgan telefon" };
+
+  const { device, catalogProduct, store } = result;
+  const title = device.title || catalogProduct?.name || "Ishlatilgan telefon";
+  const description = device.description
+    ? device.description.slice(0, 160)
+    : `${formatPrice(device.price)} so'm — ${store?.name ?? "Telefy"} do'konida, Malika bozorida.`;
+  const primaryImage = device.images[0];
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      images: primaryImage ? [{ url: primaryImage }] : undefined,
+    },
+    twitter: {
+      card: primaryImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: primaryImage ? [primaryImage] : undefined,
+    },
+  };
 }
 
 export default async function UsedDeviceDetailPage({

@@ -7,6 +7,9 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { ProductCard } from "@/components/marketplace/product-card";
+import { ReviewList } from "@/components/marketplace/review-list";
+import { ReviewForm } from "@/components/marketplace/review-form";
+import { FavoriteButton } from "@/components/marketplace/favorite-button";
 import { Card } from "@/components/ui/card";
 
 export async function generateMetadata({
@@ -16,8 +19,35 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data: store } = await supabase.from("stores").select("name").eq("slug", slug).maybeSingle();
-  return { title: store?.name ?? "Do'kon" };
+  const { data: store } = await supabase
+    .from("stores")
+    .select("name, short_description, description, logo_url")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!store) return { title: "Do'kon" };
+
+  const title = store.name;
+  const description =
+    store.short_description || store.description || `${store.name} — Malika bozorida ishonchli do'kon.`;
+  const primaryImage = store.logo_url ?? undefined;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      images: primaryImage ? [{ url: primaryImage }] : undefined,
+    },
+    twitter: {
+      card: primaryImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: primaryImage ? [primaryImage] : undefined,
+    },
+  };
 }
 
 export default async function StoreDetailPage({
@@ -65,39 +95,66 @@ export default async function StoreDetailPage({
       .order("created_at", { ascending: false }),
   ]);
 
-  const [newProducts, usedProducts] = await Promise.all([
+  const [newProducts, usedProducts, { data: reviews }, { data: userData }] = await Promise.all([
     hydrateOfferCards(supabase, (rawOffers ?? []) as RawOffer[]),
     hydrateUsedDeviceCards(supabase, (rawUsedDevices ?? []) as RawUsedDevice[]),
+    supabase
+      .from("reviews")
+      .select("id, rating, comment, created_at")
+      .eq("store_id", store.id)
+      .eq("status", "approved")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(30),
+    supabase.auth.getUser(),
   ]);
   const products = [...newProducts, ...usedProducts];
+
+  const { data: existingSavedStore } = userData.user
+    ? await supabase
+        .from("saved_stores")
+        .select("id")
+        .eq("user_id", userData.user.id)
+        .eq("store_id", store.id)
+        .maybeSingle()
+    : { data: null };
 
   return (
     <div className="flex min-h-dvh flex-col">
       <SiteHeader />
       <main className="flex-1 pb-24 lg:pb-0">
         <div className="container py-8 sm:py-12">
-          <div className="flex items-start gap-4">
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary">
-              <Store className="h-8 w-8" />
-            </span>
-            <div className="min-w-0">
-              <h1 className="flex items-center gap-1.5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                {store.name}
-                {store.verified && <BadgeCheck className="h-5 w-5 shrink-0 text-primary" />}
-              </h1>
-              {store.rating_count > 0 && (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {store.rating_avg.toFixed(1)} ★ ({store.rating_count} baho)
-                </p>
-              )}
-              <a
-                href={`tel:${store.phone_primary}`}
-                className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-              >
-                <Phone className="h-4 w-4" />
-                {store.phone_primary}
-              </a>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary">
+                <Store className="h-8 w-8" />
+              </span>
+              <div className="min-w-0">
+                <h1 className="flex items-center gap-1.5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                  {store.name}
+                  {store.verified && <BadgeCheck className="h-5 w-5 shrink-0 text-primary" />}
+                </h1>
+                {store.rating_count > 0 && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {store.rating_avg.toFixed(1)} ★ ({store.rating_count} baho)
+                  </p>
+                )}
+                <a
+                  href={`tel:${store.phone_primary}`}
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                >
+                  <Phone className="h-4 w-4" />
+                  {store.phone_primary}
+                </a>
+              </div>
             </div>
+            <FavoriteButton
+              target={{ storeId: store.id }}
+              isLoggedIn={!!userData.user}
+              initialSaved={!!existingSavedStore}
+              revalidatePathTo={`/stores/${slug}`}
+              size="sm"
+            />
           </div>
 
           {(store.description || store.short_description) && (
@@ -121,6 +178,17 @@ export default async function StoreDetailPage({
               <p className="font-medium text-foreground">Hozircha mahsulot yo&rsquo;q</p>
             </Card>
           )}
+
+          <h2 className="mb-3 mt-10 text-lg font-semibold text-foreground">
+            Baholar {store.rating_count > 0 && `(${store.rating_count})`}
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ReviewList reviews={reviews ?? []} />
+            <ReviewForm
+              target={{ storeId: store.id, revalidate: `/stores/${slug}` }}
+              isLoggedIn={!!userData.user}
+            />
+          </div>
         </div>
       </main>
       <SiteFooter />

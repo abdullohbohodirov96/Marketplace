@@ -7,15 +7,35 @@ import "@fontsource-variable/inter";
 import "@fontsource-variable/inter/wght-italic.css";
 import "./globals.css";
 
+const SITE_TITLE = "Telefy — Malika bozori onlayn";
+const SITE_DESCRIPTION = "Malika elektronika bozoridagi eng yaxshi takliflarni toping va solishtiring.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: {
-    default: "Telefy — Malika bozori onlayn",
+    default: SITE_TITLE,
     template: "%s | Telefy",
   },
-  description:
-    "Malika elektronika bozoridagi eng yaxshi takliflarni toping va solishtiring.",
+  description: SITE_DESCRIPTION,
   manifest: "/manifest.webmanifest",
+  // Per-page routes (product/used/store) override title/description/images
+  // via their own generateMetadata — this is the fallback for everything
+  // else (home, categories, /about, etc.) so a shared link never renders
+  // blank on Telegram/Instagram.
+  openGraph: {
+    type: "website",
+    locale: "uz_UZ",
+    siteName: "Telefy",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [{ url: "/logo-full.png", width: 1901, height: 535, alt: "Telefy" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/logo-full.png"],
+  },
 };
 
 export const viewport: Viewport = {

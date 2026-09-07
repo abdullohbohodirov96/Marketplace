@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, Users, Store, ShieldCheck, Tag } from "lucide-react";
+import { LayoutDashboard, Users, Store, ShieldCheck, Tag, ClipboardCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/ui/logo";
 
@@ -11,9 +11,10 @@ export const metadata: Metadata = {
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Umumiy ko'rinish", icon: LayoutDashboard },
+  { href: "/admin/moderation", label: "Moderatsiya", icon: ClipboardCheck },
   { href: "/admin/categories", label: "Kategoriyalar", icon: Tag },
-  { href: "/admin", label: "Foydalanuvchilar", icon: Users, disabled: true },
-  { href: "/admin", label: "Do'konlar", icon: Store, disabled: true },
+  { href: "/admin/users", label: "Foydalanuvchilar", icon: Users },
+  { href: "/admin/stores", label: "Do'konlar", icon: Store },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -46,21 +47,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.label}
-              href={item.disabled ? "#" : item.href}
-              aria-disabled={item.disabled}
-              className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                item.disabled
-                  ? "cursor-not-allowed text-muted-foreground/50"
-                  : "text-foreground hover:bg-secondary"
-              }`}
+              href={item.href}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
             >
               <item.icon className="h-4 w-4" />
               {item.label}
-              {item.disabled && (
-                <span className="ml-auto rounded-full bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                  tez orada
-                </span>
-              )}
             </Link>
           ))}
         </nav>

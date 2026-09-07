@@ -74,9 +74,9 @@ export async function createStoreAction(
       block: block || null,
       row_label: rowLabel || null,
       shop_number: shopNumber || null,
-      // No moderation queue exists yet, so a seller's own store goes live
-      // immediately — the admin panel can suspend it later if needed.
-      status: "approved",
+      // Waits in /admin/moderation until an admin approves it — see
+      // 0031_moderation_hardening.sql for why this used to go live instantly.
+      status: "pending",
     })
     .select("id")
     .single();
@@ -381,8 +381,9 @@ export async function createProductAction(
       color: color || null,
       memory: memory || null,
       description: description || null,
-      status: "active",
-      published_at: new Date().toISOString(),
+      // Waits in /admin/moderation until an admin/moderator approves it —
+      // published_at is set then, not here. See 0031_moderation_hardening.sql.
+      status: "pending",
     })
     .select("id")
     .single();
@@ -508,8 +509,9 @@ export async function createUsedDeviceAction(
       box_available: boxAvailable,
       charger_available: chargerAvailable,
       description: description || null,
-      status: "active",
-      published_at: new Date().toISOString(),
+      // Waits in /admin/moderation until an admin/moderator approves it —
+      // published_at is set then, not here. See 0031_moderation_hardening.sql.
+      status: "pending",
     })
     .select("id")
     .single();

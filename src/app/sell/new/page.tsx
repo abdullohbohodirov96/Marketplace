@@ -14,6 +14,7 @@ import { ReservationRow } from "@/components/sell/reservation-row";
 import { ProductThumb } from "@/components/marketplace/product-thumb";
 import { StoreLogoUpload } from "@/components/sell/store-logo-upload";
 import { StoreLocationPicker } from "@/components/sell/store-location-picker";
+import { VerificationRequestForm } from "@/components/sell/verification-request-form";
 
 export const metadata: Metadata = { title: "Mahsulot qo'shish" };
 
@@ -76,18 +77,30 @@ export default async function SellNewPage() {
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, name, status, logo_url")
+    .select("id, name, status, logo_url, verified")
     .eq("owner_id", user.id)
     .maybeSingle();
 
-  const { data: primaryLocation } = store
-    ? await supabase
-        .from("store_locations")
-        .select("latitude, longitude")
-        .eq("store_id", store.id)
-        .eq("is_primary", true)
-        .maybeSingle()
-    : { data: null };
+  const [{ data: primaryLocation }, { data: verification }] = await Promise.all([
+    store
+      ? supabase
+          .from("store_locations")
+          .select("latitude, longitude")
+          .eq("store_id", store.id)
+          .eq("is_primary", true)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    store
+      ? supabase
+          .from("store_verifications")
+          .select("status, rejection_reason")
+          .eq("store_id", store.id)
+          .eq("verification_type", "verified_seller")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
@@ -204,7 +217,15 @@ export default async function SellNewPage() {
               {store.status !== "approved" && (
                 <p className="rounded-lg bg-warning/10 px-3.5 py-2.5 text-sm text-warning-foreground">
                   &ldquo;{store.name}&rdquo; do&rsquo;koni hozircha ko&rsquo;rib chiqilmoqda. Mahsulot
-                  qo&rsquo;shishingiz mumkin, tasdiqlangach ular marketplace&rsquo;da ko&rsquo;rinadi.
+                  qo&rsquo;shishingiz mumkin, lekin do&rsquo;kon tasdiqlanmaguncha ular
+                  marketplace&rsquo;da ko&rsquo;rinmaydi.
+                </p>
+              )}
+              {store.status === "approved" && (
+                <p className="rounded-lg bg-secondary/60 px-3.5 py-2.5 text-sm text-muted-foreground">
+                  Har bir yangi e&rsquo;lon ham qo&rsquo;shilgandan keyin qisqa ko&rsquo;rib chiqishdan
+                  o&rsquo;tadi (odatda tez) — &ldquo;Kutilmoqda&rdquo; belgisi ko&rsquo;rinsa, hali
+                  tasdiqlanmagan degani.
                 </p>
               )}
 
@@ -229,6 +250,24 @@ export default async function SellNewPage() {
                   <StoreLocationPicker
                     latitude={primaryLocation?.latitude ?? null}
                     longitude={primaryLocation?.longitude ?? null}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Tasdiqlangan sotuvchi belgisi</CardTitle>
+                  <CardDescription>
+                    Xaridorlar do&rsquo;koningiz ismi yonida ko&rsquo;k belgi ko&rsquo;radi — ishonch
+                    oshadi.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <VerificationRequestForm
+                    storeId={store.id}
+                    isVerified={store.verified}
+                    pendingStatus={verification?.status ?? null}
+                    rejectionReason={verification?.rejection_reason ?? null}
                   />
                 </CardContent>
               </Card>

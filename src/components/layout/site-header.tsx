@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Heart, Bell, MapPin, Store, Search, User, Plus } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 
@@ -9,7 +10,22 @@ const NAV_ITEMS = [
   { href: "/stores", label: "Do’konlar", icon: Store },
 ];
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const unreadCount = user
+    ? (
+        await supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .is("read_at", null)
+      ).count ?? 0
+    : 0;
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center gap-4">
@@ -38,11 +54,24 @@ export function SiteHeader() {
         </div>
 
         <div className="ml-auto flex items-center gap-1.5">
-          <Button variant="ghost" size="icon" aria-label="Sevimlilar" className="hidden sm:inline-flex">
-            <Heart />
+          <Button variant="ghost" size="icon" aria-label="Sevimlilar" asChild className="hidden sm:inline-flex">
+            <Link href={user ? "/favorites" : "/login?next=/favorites"}>
+              <Heart />
+            </Link>
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Bildirishnomalar" className="hidden sm:inline-flex">
-            <Bell />
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Bildirishnomalar"
+            asChild
+            className="relative hidden sm:inline-flex"
+          >
+            <Link href={user ? "/notifications" : "/login?next=/notifications"}>
+              <Bell />
+              {unreadCount > 0 && (
+                <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-destructive" />
+              )}
+            </Link>
           </Button>
           <Button variant="outline" size="sm" asChild className="hidden md:inline-flex">
             <Link href="/register?role=seller">
@@ -51,7 +80,7 @@ export function SiteHeader() {
             </Link>
           </Button>
           <Button variant="ghost" size="icon" aria-label="Profil" asChild>
-            <Link href="/login">
+            <Link href={user ? "/account" : "/login"}>
               <User />
             </Link>
           </Button>

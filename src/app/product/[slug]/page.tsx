@@ -5,6 +5,10 @@ import { Phone, Store, ShieldCheck, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ProductGallery } from "@/components/marketplace/product-gallery";
 import { ReserveButton } from "@/components/marketplace/reserve-button";
+import { ReviewList } from "@/components/marketplace/review-list";
+import { ReviewForm } from "@/components/marketplace/review-form";
+import { RatingStars } from "@/components/marketplace/rating-stars";
+import { FavoriteButton } from "@/components/marketplace/favorite-button";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -51,9 +55,19 @@ async function getOfferBySlug(slug: string) {
       .order("sort_order", { ascending: true }),
   ]);
 
-  const { data: category } = catalogProduct
-    ? await supabase.from("categories").select("slug, name_uz").eq("id", catalogProduct.category_id).maybeSingle()
-    : { data: null };
+  const [{ data: category }, { data: reviews }] = await Promise.all([
+    catalogProduct
+      ? supabase.from("categories").select("slug, name_uz").eq("id", catalogProduct.category_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("reviews")
+      .select("id, rating, comment, created_at")
+      .eq("product_offer_id", offer.id)
+      .eq("status", "approved")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(30),
+  ]);
 
   const otherStoreIds = [...new Set((otherOffersRaw ?? []).map((o) => o.store_id))];
   const { data: otherStores } = otherStoreIds.length
@@ -69,7 +83,7 @@ async function getOfferBySlug(slug: string) {
   const sortedImages = [...(images ?? [])].sort((a, b) => Number(b.is_primary) - Number(a.is_primary));
   const imageUrls = sortedImages.map((img) => img.url);
 
-  return { offer, catalogProduct, store, category, otherOffers, imageUrls };
+  return { offer, catalogProduct, store, category, otherOffers, imageUrls, reviews: reviews ?? [] };
 }
 
 export async function generateMetadata({
@@ -79,8 +93,31 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const result = await getOfferBySlug(slug);
-  const title = result?.offer.seller_product_name || result?.catalogProduct?.name || "Mahsulot";
-  return { title };
+  if (!result) return { title: "Mahsulot" };
+
+  const { offer, catalogProduct, store, imageUrls } = result;
+  const title = offer.seller_product_name || catalogProduct?.name || "Mahsulot";
+  const description = offer.description
+    ? offer.description.slice(0, 160)
+    : `${formatPrice(offer.price)} so'm — ${store?.name ?? "Telefy"} do'konida, Malika bozorida.`;
+  const primaryImage = imageUrls[0];
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      images: primaryImage ? [{ url: primaryImage }] : undefined,
+    },
+    twitter: {
+      card: primaryImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: primaryImage ? [primaryImage] : undefined,
+    },
+  };
 }
 
 export default async function ProductDetailPage({
@@ -96,9 +133,19 @@ export default async function ProductDetailPage({
     notFound();
   }
 
-  const { offer, catalogProduct, store, category, otherOffers, imageUrls } = result;
+  const { offer, catalogProduct, store, category, otherOffers, imageUrls, reviews } = result;
   const title = offer.seller_product_name || catalogProduct?.name || "Mahsulot";
   const hasDiscount = !!offer.old_price && offer.old_price > offer.price;
+  const avgRating = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
+
+  const { data: existingFavorite } = userData.user
+    ? await supabase
+        .from("favorites")
+        .select("id")
+        .eq("user_id", userData.user.id)
+        .eq("product_offer_id", offer.id)
+        .maybeSingle()
+    : { data: null };
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -124,6 +171,12 @@ export default async function ProductDetailPage({
                 </Link>
               )}
               <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{title}</h1>
+              {reviews.length > 0 && (
+                <div className="-mt-2 flex items-center gap-1.5">
+                  <RatingStars value={avgRating} />
+                  <span className="text-xs text-muted-foreground">({reviews.length})</span>
+                </div>
+              )}
 
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-foreground sm:text-3xl">
@@ -176,6 +229,12 @@ export default async function ProductDetailPage({
                   </a>
                 </Button>
                 <ReserveButton offerId={offer.id} isLoggedIn={!!userData.user} />
+                <FavoriteButton
+                  target={{ productOfferId: offer.id }}
+                  isLoggedIn={!!userData.user}
+                  initialSaved={!!existingFavorite}
+                  revalidatePathTo={`/product/${slug}`}
+                />
               </div>
             </div>
           </div>
@@ -197,6 +256,19 @@ export default async function ProductDetailPage({
               </div>
             </div>
           )}
+
+          <div className="mt-10">
+            <h2 className="mb-3 text-lg font-semibold text-foreground">
+              Baholar {reviews.length > 0 && `(${reviews.length})`}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ReviewList reviews={reviews} />
+              <ReviewForm
+                target={{ productOfferId: offer.id, revalidate: `/product/${slug}` }}
+                isLoggedIn={!!userData.user}
+              />
+            </div>
+          </div>
         </div>
       </main>
       <SiteFooter />
