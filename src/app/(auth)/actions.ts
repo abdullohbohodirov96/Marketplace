@@ -168,8 +168,17 @@ export async function forgotPasswordAction(
   const supabase = await createClient();
 
   if (uzPhoneRegex.test(identifier)) {
-    // Always attempt the send — never reveal whether the phone is registered.
-    await supabase.auth.signInWithOtp({ phone: identifier });
+    // Always attempt the send regardless of whether the phone is registered
+    // (signInWithOtp creates the auth user on first OTP by default, so this
+    // never leaks registration status either way) — but a real send failure
+    // (no SMS provider configured in Supabase, provider outage, etc.) is a
+    // different thing entirely and must not be swallowed: silently claiming
+    // success sent the person to a "enter the code we texted you" screen
+    // that could never be completed, with no indication anything was wrong.
+    const { error } = await supabase.auth.signInWithOtp({ phone: identifier });
+    if (error) {
+      return { error: "SMS yuborib bo'lmadi. Birozdan so'ng qayta urinib ko'ring." };
+    }
     return { success: true, phone: identifier };
   }
 
