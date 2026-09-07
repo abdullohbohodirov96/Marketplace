@@ -59,6 +59,57 @@ export async function createCategoryAction(_prevState: CategoryActionState, form
   return { success: true };
 }
 
+/**
+ * Edits an existing category's display fields. The slug is deliberately
+ * left untouched here — it's the public URL (/categories/[slug]) and
+ * anything already linking to it, so a rename shouldn't silently move it.
+ */
+export async function updateCategoryAction(
+  categoryId: string,
+  _prevState: CategoryActionState,
+  formData: FormData,
+): Promise<CategoryActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Avval tizimga kiring" };
+
+  const nameUz = String(formData.get("name_uz") ?? "").trim();
+  const nameRu = String(formData.get("name_ru") ?? "").trim();
+  const parentId = String(formData.get("parent_id") ?? "").trim();
+  const icon = String(formData.get("icon") ?? "").trim();
+  const sortOrderRaw = String(formData.get("sort_order") ?? "0").replace(/[^0-9]/g, "");
+
+  const fieldErrors: Record<string, string[]> = {};
+  if (nameUz.length < 2) fieldErrors.name_uz = ["Kategoriya nomini kiriting (kamida 2 ta belgi)"];
+  if (parentId === categoryId) fieldErrors.parent_id = ["Kategoriya o'zining ustki kategoriyasi bo'la olmaydi"];
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+
+  const { error } = await supabase
+    .from("categories")
+    .update({
+      name_uz: nameUz,
+      name_ru: nameRu || null,
+      parent_id: parentId || null,
+      icon: icon || null,
+      sort_order: sortOrderRaw ? Number(sortOrderRaw) : 0,
+    })
+    .eq("id", categoryId);
+
+  if (error) {
+    if (error.code === "42501") {
+      return { error: "Bu amal faqat administrator uchun ruxsat etilgan" };
+    }
+    return { error: error.message };
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/categories");
+  revalidatePath("/sell/new");
+  return { success: true };
+}
+
 export async function toggleCategoryActiveAction(categoryId: string, nextActive: boolean): Promise<void> {
   const supabase = await createClient();
   await supabase.from("categories").update({ is_active: nextActive }).eq("id", categoryId);

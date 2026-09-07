@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { Tag } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { CreateCategoryForm } from "@/components/admin/create-category-form";
-import { toggleCategoryActiveAction } from "@/app/admin/categories/actions";
+import { CategoryAdminList, type CategoryTreeNode } from "@/components/admin/category-admin-list";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Kategoriyalar — Admin" };
 
@@ -31,14 +29,28 @@ export default async function AdminCategoriesPage() {
   })();
   const isAdmin = profile?.role === "admin";
 
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("id, parent_id, name_uz, name_ru, slug, icon, sort_order, is_active")
-    .order("sort_order", { ascending: true });
+  const [{ data: categories }, { data: catalogProducts }] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, parent_id, name_uz, name_ru, slug, icon, sort_order, is_active")
+      .order("sort_order", { ascending: true }),
+    // A lightweight usage signal per category — "is this category actually
+    // used, or just clutter?" — counting distinct catalog products (not
+    // every seller offer/unit) keeps this a single cheap query.
+    supabase.from("catalog_products").select("category_id").eq("status", "approved"),
+  ]);
 
-  const rows = (categories ?? []) as CategoryRow[];
+  const productCountByCategory = new Map<string, number>();
+  for (const p of catalogProducts ?? []) {
+    productCountByCategory.set(p.category_id, (productCountByCategory.get(p.category_id) ?? 0) + 1);
+  }
+
+  const rows: CategoryTreeNode[] = ((categories ?? []) as CategoryRow[]).map((c) => ({
+    ...c,
+    productCount: productCountByCategory.get(c.id) ?? 0,
+  }));
   const topLevel = rows.filter((c) => !c.parent_id);
-  const childrenByParent = new Map<string, CategoryRow[]>();
+  const childrenByParent = new Map<string, CategoryTreeNode[]>();
   for (const c of rows) {
     if (!c.parent_id) continue;
     const list = childrenByParent.get(c.parent_id) ?? [];
@@ -51,7 +63,8 @@ export default async function AdminCategoriesPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Kategoriyalar</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Marketplace bo&rsquo;ylab ko&rsquo;rinadigan kategoriyalarni shu yerdan boshqaring.
+          Marketplace bo&rsquo;ylab ko&rsquo;rinadigan kategoriyalarni shu yerdan boshqaring — qalam
+          belgisi orqali tahrirlang, ikonkani rasm sifatida tanlang.
         </p>
       </div>
 
@@ -70,53 +83,7 @@ export default async function AdminCategoriesPage() {
         <CardContent>{isAdmin ? <CreateCategoryForm parents={topLevel} /> : null}</CardContent>
       </Card>
 
-      <div className="flex flex-col gap-2.5">
-        {topLevel.map((cat) => (
-          <div key={cat.id} className="flex flex-col gap-2">
-            <CategoryRowItem category={cat} isAdmin={isAdmin} />
-            {(childrenByParent.get(cat.id) ?? []).map((child) => (
-              <div key={child.id} className="ml-6">
-                <CategoryRowItem category={child} isAdmin={isAdmin} />
-              </div>
-            ))}
-          </div>
-        ))}
-        {topLevel.length === 0 && (
-          <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Hali kategoriya yo&rsquo;q.
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CategoryRowItem({ category, isAdmin }: { category: CategoryRow; isAdmin: boolean }) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-border bg-background p-3.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary">
-        <Tag className="h-4 w-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">{category.name_uz}</p>
-        <p className="truncate text-xs text-muted-foreground">
-          /{category.slug} {category.name_ru && `· ${category.name_ru}`}
-        </p>
-      </div>
-      <span
-        className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${
-          category.is_active ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground"
-        }`}
-      >
-        {category.is_active ? "Faol" : "O'chirilgan"}
-      </span>
-      {isAdmin && (
-        <form action={toggleCategoryActiveAction.bind(null, category.id, !category.is_active)}>
-          <Button type="submit" size="sm" variant="outline">
-            {category.is_active ? "O'chirish" : "Yoqish"}
-          </Button>
-        </form>
-      )}
+      <CategoryAdminList topLevel={topLevel} childrenByParent={childrenByParent} isAdmin={isAdmin} />
     </div>
   );
 }

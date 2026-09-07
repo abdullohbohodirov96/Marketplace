@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FieldError } from "@/components/auth/field-error";
 import { SubmitButton } from "@/components/auth/submit-button";
+import { CategoryIconPicker } from "@/components/admin/category-icon-picker";
 
 const initialState: CategoryActionState = {};
 
@@ -56,10 +57,7 @@ export function CreateCategoryForm({ parents }: { parents: { id: string; name_uz
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="cat-icon">Ikonka nomi (ixtiyoriy, lucide-react)</Label>
-        <Input id="cat-icon" name="icon" placeholder="Masalan: tablet" className="mt-1.5" />
-      </div>
+      <CategoryIconPicker name="icon" />
 
       {state.error && (
         <p className="rounded-lg bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert">
