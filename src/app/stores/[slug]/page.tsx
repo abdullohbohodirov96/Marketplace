@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Store, Phone, BadgeCheck } from "lucide-react";
+import { Phone, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { hydrateOfferCards, hydrateUsedDeviceCards, type RawOffer, type RawUsedDevice } from "@/lib/marketplace/hydrate-offers";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -10,6 +10,7 @@ import { ProductCard } from "@/components/marketplace/product-card";
 import { ReviewList } from "@/components/marketplace/review-list";
 import { ReviewForm } from "@/components/marketplace/review-form";
 import { FavoriteButton } from "@/components/marketplace/favorite-button";
+import { StoreLogo } from "@/components/marketplace/store-logo";
 import { Card } from "@/components/ui/card";
 
 export async function generateMetadata({
@@ -60,7 +61,7 @@ export default async function StoreDetailPage({
 
   const { data: store } = await supabase
     .from("stores")
-    .select("id, name, short_description, description, phone_primary, verified, rating_avg, rating_count, status")
+    .select("id, name, short_description, description, phone_primary, verified, rating_avg, rating_count, status, logo_url")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -126,9 +127,7 @@ export default async function StoreDetailPage({
         <div className="container py-8 sm:py-12">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary">
-                <Store className="h-8 w-8" />
-              </span>
+              <StoreLogo logoUrl={store.logo_url} size="lg" />
               <div className="min-w-0">
                 <h1 className="flex items-center gap-1.5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                   {store.name}

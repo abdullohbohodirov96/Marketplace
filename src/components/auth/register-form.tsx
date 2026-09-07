@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { registerAction, type ActionState } from "@/app/(auth)/actions";
+import { passwordSchema } from "@/lib/validations/auth";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,18 @@ export function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
+
+  // Live, per-keystroke check against the exact same rule set the server
+  // uses (passwordSchema) — once the person has typed anything here, this
+  // takes over from state.fieldErrors?.password entirely. Without this,
+  // a "Parolda kichik harf bo'lishi kerak" error from a previous failed
+  // submit stayed pinned to the field (red border, old message) even after
+  // the person fixed and retyped the password, because state only changes
+  // on the next full server round-trip — it never reflected what was
+  // actually in the field right now.
+  const passwordCheck = password.length > 0 ? passwordSchema.safeParse(password) : null;
+  const livePasswordError =
+    passwordCheck && !passwordCheck.success ? passwordCheck.error.issues[0]?.message : undefined;
 
   if (state.success) {
     return (
@@ -141,11 +154,15 @@ export function RegisterForm() {
           name="password"
           autoComplete="new-password"
           className="mt-1.5"
-          invalid={!!state.fieldErrors?.password}
+          invalid={password.length > 0 ? !!livePasswordError : !!state.fieldErrors?.password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <FieldError messages={state.fieldErrors?.password} />
+        {password.length > 0 ? (
+          livePasswordError && <p className="mt-1.5 text-sm text-destructive">{livePasswordError}</p>
+        ) : (
+          <FieldError messages={state.fieldErrors?.password} />
+        )}
       </div>
 
       <div>
@@ -182,7 +199,7 @@ export function RegisterForm() {
         </p>
       )}
 
-      <SubmitButton size="lg" disabled={passwordsMismatch}>
+      <SubmitButton size="lg" disabled={passwordsMismatch || !!livePasswordError}>
         Ro’yxatdan o’tish
       </SubmitButton>
 

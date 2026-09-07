@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Phone, Store, ShieldCheck, BadgeCheck } from "lucide-react";
+import { Phone, ShieldCheck, BadgeCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ProductGallery } from "@/components/marketplace/product-gallery";
 import { ReserveButton } from "@/components/marketplace/reserve-button";
@@ -9,6 +9,7 @@ import { ReviewList } from "@/components/marketplace/review-list";
 import { ReviewForm } from "@/components/marketplace/review-form";
 import { RatingStars } from "@/components/marketplace/rating-stars";
 import { FavoriteButton } from "@/components/marketplace/favorite-button";
+import { StoreLogo } from "@/components/marketplace/store-logo";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -36,7 +37,7 @@ async function getOfferBySlug(slug: string) {
     supabase.from("catalog_products").select("name, category_id").eq("id", offer.catalog_product_id).maybeSingle(),
     supabase
       .from("stores")
-      .select("id, name, slug, phone_primary, verified, status")
+      .select("id, name, slug, phone_primary, verified, status, logo_url")
       .eq("id", offer.store_id)
       .maybeSingle(),
     supabase
@@ -216,9 +217,7 @@ export default async function ProductDetailPage({
                   href={`/stores/${store.slug}`}
                   className="flex items-center gap-2.5 text-sm font-medium text-foreground hover:text-primary"
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-50 text-primary">
-                    <Store className="h-4 w-4" />
-                  </span>
+                  <StoreLogo logoUrl={store.logo_url} size="sm" />
                   {store.name}
                   {store.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
                 </Link>

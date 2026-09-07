@@ -16,15 +16,25 @@ export async function SiteHeader() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const unreadCount = user
-    ? (
-        await supabase
+  const [{ count: unreadCountRaw }, { data: profile }] = user
+    ? await Promise.all([
+        supabase
           .from("notifications")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
-          .is("read_at", null)
-      ).count ?? 0
-    : 0;
+          .is("read_at", null),
+        supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+      ])
+    : [{ count: 0 }, { data: null }];
+  const unreadCount = unreadCountRaw ?? 0;
+
+  // becomeSellerAction (src/app/sell/actions.ts) flips profiles.role to
+  // "seller" the moment someone starts the seller flow — before they've
+  // even created a store — so this is already true for a seller who is
+  // mid-onboarding, not just one with an approved store. Someone already on
+  // that path should never see "Sotuvchi bo'lish" (Become a seller) again;
+  // they should see their own store instead.
+  const isSeller = profile?.role === "seller";
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -74,10 +84,17 @@ export async function SiteHeader() {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild className="hidden md:inline-flex">
-            <Link href="/register?role=seller">
-              <Plus />
-              Sotuvchi bo’lish
-            </Link>
+            {isSeller ? (
+              <Link href="/sell/new">
+                <Store />
+                Mening do’konim
+              </Link>
+            ) : (
+              <Link href={user ? "/sell/new" : "/register?role=seller"}>
+                <Plus />
+                Sotuvchi bo’lish
+              </Link>
+            )}
           </Button>
           <Button variant="ghost" size="icon" aria-label="Profil" asChild>
             <Link href={user ? "/account" : "/login"}>

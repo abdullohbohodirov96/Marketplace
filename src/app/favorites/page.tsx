@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { ProductCard } from "@/components/marketplace/product-card";
+import { StoreLogo } from "@/components/marketplace/store-logo";
 import { Card } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "Saqlanganlar" };
@@ -41,7 +42,7 @@ export default async function FavoritesPage() {
     storeIds.length > 0
       ? supabase
           .from("stores")
-          .select("id, name, slug, short_description, phone_primary, verified, rating_avg, rating_count")
+          .select("id, name, slug, short_description, phone_primary, verified, rating_avg, rating_count, logo_url")
           .in("id", storeIds)
           .eq("status", "approved")
       : Promise.resolve({
@@ -54,6 +55,7 @@ export default async function FavoritesPage() {
             verified: boolean;
             rating_avg: number;
             rating_count: number;
+            logo_url: string | null;
           }[],
         }),
   ]);
@@ -99,9 +101,7 @@ export default async function FavoritesPage() {
                   className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 transition-colors hover:border-primary/40"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary">
-                      <Store className="h-5 w-5" />
-                    </span>
+                    <StoreLogo logoUrl={store.logo_url} />
                     <div className="min-w-0">
                       <p className="flex items-center gap-1 truncate font-medium text-foreground">
                         {store.name}
